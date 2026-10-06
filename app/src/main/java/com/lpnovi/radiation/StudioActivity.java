@@ -160,7 +160,8 @@ public class StudioActivity extends AppCompatActivity {
         RemoteViews views = WidgetRenderer.build(this, widgetId, config,
                 MediaSessions.active(this), MediaSessions.hasAccess(this));
         preview.removeAllViews();
-        preview.addView(views.apply(this, preview));
+        // Application context: an AppCompat inflater would swap in subclasses RemoteViews rejects.
+        preview.addView(views.apply(getApplicationContext(), preview));
     }
 
     private void openAccessSettings() {
