@@ -118,7 +118,7 @@ public final class WidgetUpdater {
      */
     static void showOptimisticPlayState(Context context, boolean playing) {
         RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_radiation);
-        WidgetRenderer.setPlayGlyph(v, playing);
+        WidgetRenderer.setPlaying(context, v, playing);
         AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(widgetIds(context), v);
     }
 

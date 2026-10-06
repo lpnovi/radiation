@@ -86,17 +86,50 @@
                 android:textColor="#FFFFFFFF"
                 android:textSize="16sp" />
 
-            <TextView
-                android:id="@+id/artist"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:ellipsize="end"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:text="@string/app_name"
-                android:textColor="#B8FFFFFF"
-                android:textSize="14sp" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Now playing (animated): indeterminate ProgressBar running eq_anim. Android 12+. -->
+                <ProgressBar
+                    android:id="@+id/eq"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_marginEnd="6dp"
+                    android:indeterminate="true"
+                    android:indeterminateDrawable="@drawable/eq_anim"
+                    android:indeterminateOnly="true"
+                    android:maxWidth="12dp"
+                    android:maxHeight="12dp"
+                    android:minWidth="12dp"
+                    android:minHeight="12dp"
+                    android:visibility="gone" />
+
+                <!-- Now playing (static): used when animations are off or tinting isn't available. -->
+                <ImageView
+                    android:id="@+id/eq_static"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_marginEnd="6dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/eq_f4"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/artist"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="@string/app_name"
+                    android:textColor="#B8FFFFFF"
+                    android:textSize="14sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <ImageButton
@@ -110,35 +143,17 @@
             android:src="@drawable/ic_skip_previous_state"
             android:tint="#FFFFFFFF" />
 
-        <!-- Focal point: a filled disc in the accent color, glyph cut out in onAccent. -->
-        <FrameLayout
+        <!-- Focal point by size alone: a larger bare glyph, no resting background. -->
+        <ImageButton
             android:id="@+id/play_pause"
             android:layout_width="@dimen/play_size"
             android:layout_height="@dimen/play_size"
-            android:layout_marginHorizontal="2dp"
-            android:contentDescription="@string/play_pause">
-
-            <ImageView
-                android:id="@+id/play_pause_disc"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:duplicateParentState="true"
-                android:importantForAccessibility="no"
-                android:scaleType="fitXY"
-                android:src="@drawable/disc_state"
-                android:tint="#FFFFFFFF" />
-
-            <ImageView
-                android:id="@+id/play_pause_icon"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:duplicateParentState="true"
-                android:importantForAccessibility="no"
-                android:padding="14dp"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_play_state"
-                android:tint="#FF000000" />
-        </FrameLayout>
+            android:background="@drawable/ripple_on_dark"
+            android:contentDescription="@string/play_pause"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_play_state"
+            android:tint="#FFFFFFFF" />
 
         <ImageButton
             android:id="@+id/next"

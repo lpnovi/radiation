@@ -29,8 +29,7 @@ public final class ColorEngine {
         public int effective;      // what the eye sees behind the foreground: surface blended over wallpaper
         public int text;
         public int textSecondary;  // opaque, pre-blended, still >= 4.5:1
-        public int accent;         // play disc + prev/next glyphs
-        public int onAccent;       // play/pause glyph on the disc
+        public int accent;         // control glyphs + now-playing indicator
         public int placeholder;    // fallback art tile + icon tint
         public boolean darkForeground;  // effective background is light
     }
@@ -65,7 +64,6 @@ public final class ColorEngine {
             default: accentSeed = t.text; break;
         }
         t.accent = ensureContrast(accentSeed, t.effective, TEXT_CONTRAST);
-        t.onAccent = contrast(INK, t.accent) >= contrast(WHITE, t.accent) ? INK : WHITE;
         t.placeholder = blend(t.text, t.effective, 0.12f);
         return t;
     }

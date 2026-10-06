@@ -6,6 +6,7 @@ import android.app.WallpaperManager;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapShader;
@@ -15,6 +16,7 @@ import android.graphics.Paint;
 import android.graphics.Shader;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.View;
@@ -65,7 +67,7 @@ public final class WidgetRenderer {
         v.setViewPadding(R.id.previous, sideInset, sideInset, sideInset, sideInset);
         v.setViewPadding(R.id.next, sideInset, sideInset, sideInset, sideInset);
         int playInset = px(context, (s.play - s.playIcon) / 2f);
-        v.setViewPadding(R.id.play_pause_icon, playInset, playInset, playInset, playInset);
+        v.setViewPadding(R.id.play_pause, playInset, playInset, playInset, playInset);
 
         // Text.
         boolean nothing = TextUtils.isEmpty(np.title);
@@ -92,14 +94,19 @@ public final class WidgetRenderer {
         // Controls.
         int ripple = t.darkForeground ? R.drawable.ripple_on_light : R.drawable.ripple_on_dark;
         v.setInt(R.id.previous, "setBackgroundResource", ripple);
+        v.setInt(R.id.play_pause, "setBackgroundResource", ripple);
         v.setInt(R.id.next, "setBackgroundResource", ripple);
         v.setInt(R.id.previous, "setColorFilter", t.accent);
         v.setInt(R.id.next, "setColorFilter", t.accent);
-        v.setInt(R.id.play_pause_disc, "setColorFilter", t.accent);
-        v.setInt(R.id.play_pause_icon, "setColorFilter", t.onAccent);
+        v.setInt(R.id.play_pause, "setColorFilter", t.accent);
         v.setViewVisibility(R.id.previous, config.showPrevious ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.next, config.showNext ? View.VISIBLE : View.GONE);
-        setPlayGlyph(v, np.playing);
+        // Now-playing indicator shares the accent, so it reads as part of the song's theme.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            v.setColorStateList(R.id.eq, "setIndeterminateTintList", ColorStateList.valueOf(t.accent));
+        }
+        v.setInt(R.id.eq_static, "setColorFilter", t.accent);
+        setPlaying(context, v, np.playing && !nothing);
 
         v.setOnClickPendingIntent(R.id.previous, control(context, MediaSessions.Action.PREVIOUS));
         v.setOnClickPendingIntent(R.id.play_pause, control(context, MediaSessions.Action.PLAY_PAUSE));
@@ -112,8 +119,27 @@ public final class WidgetRenderer {
         return v;
     }
 
-    static void setPlayGlyph(RemoteViews v, boolean playing) {
-        v.setImageViewResource(R.id.play_pause_icon, playing ? R.drawable.ic_pause_state : R.drawable.ic_play_state);
+    /**
+     * Play/pause glyph and the now-playing indicator. Also used alone for the optimistic update on
+     * tap (colors from the last full render persist through partial updates).
+     *
+     * The animated indicator is an indeterminate ProgressBar: the launcher runs it, it stops by
+     * itself when the home screen isn't visible, and we hide it (GONE) whenever playback stops, so
+     * nothing animates while paused. It's static when system animations are off, and below
+     * Android 12, where RemoteViews can't tint a ProgressBar.
+     */
+    static void setPlaying(Context context, RemoteViews v, boolean playing) {
+        v.setImageViewResource(R.id.play_pause, playing ? R.drawable.ic_pause_state : R.drawable.ic_play_state);
+        boolean animate = playing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                && animationsEnabled(context);
+        v.setViewVisibility(R.id.eq, animate ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.eq_static, playing && !animate ? View.VISIBLE : View.GONE);
+    }
+
+    /** Honors "Remove animations" (accessibility). Read globally: our process may have no window. */
+    private static boolean animationsEnabled(Context context) {
+        return Settings.Global.getFloat(context.getContentResolver(),
+                Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f;
     }
 
     /** Portrait uses the max height, landscape the min height (AppWidget options convention). */
@@ -135,11 +161,11 @@ public final class WidgetRenderer {
             s.pad = clamp(h * 0.15f, 8, 14);
             float inner = h - 2 * s.pad;
             s.art = clamp(inner, 36, 66);
-            // Focal point: as large as the row allows, at least a 44dp target, at most 58dp.
-            s.play = Math.min(clamp(inner * 0.88f, 44, 58), Math.max(inner, 36));
-            s.playIcon = s.play * 0.46f;
+            // Bare glyphs: play/pause leads by size alone (~1.4x prev/next) inside a generous target.
+            s.play = Math.min(Math.min(56, h), Math.max(inner, 40));
+            s.playIcon = Math.min(clamp(inner * 0.6f, 30, 38), s.play - 8);
             s.sideTouch = Math.min(48, Math.max(inner, 36));
-            s.sideIcon = clamp(s.play * 0.5f, 22, 30);
+            s.sideIcon = clamp(s.playIcon * 0.72f, 22, 27);
             return s;
         }
 

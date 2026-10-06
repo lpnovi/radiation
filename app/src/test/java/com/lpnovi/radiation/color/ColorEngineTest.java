@@ -23,7 +23,6 @@ public class ColorEngineTest {
         assertTrue("text", contrast(t.text, t.effective) >= 4.5);
         assertTrue("secondary", contrast(t.textSecondary, t.effective) >= 4.5);
         assertTrue("accent", contrast(t.accent, t.effective) >= 4.5);
-        assertTrue("glyph on disc", contrast(t.onAccent, t.accent) >= 3.0);
     }
 
     @Test

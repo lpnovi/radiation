@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Now-playing equalizer. Run by an indeterminate ProgressBar (the host starts Animatable
+     indeterminate drawables), so it animates in the launcher with no app work or updates.
+     ~8 fps: smooth enough to read as motion, light on redraws. -->
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android" android:oneshot="false">
+    <item android:drawable="@drawable/eq_f0" android:duration="120" />
+    <item android:drawable="@drawable/eq_f1" android:duration="120" />
+    <item android:drawable="@drawable/eq_f2" android:duration="120" />
+    <item android:drawable="@drawable/eq_f3" android:duration="120" />
+    <item android:drawable="@drawable/eq_f4" android:duration="120" />
+    <item android:drawable="@drawable/eq_f5" android:duration="120" />
+    <item android:drawable="@drawable/eq_f6" android:duration="120" />
+    <item android:drawable="@drawable/eq_f7" android:duration="120" />
+    <item android:drawable="@drawable/eq_f8" android:duration="120" />
+    <item android:drawable="@drawable/eq_f9" android:duration="120" />
+</animation-list>
