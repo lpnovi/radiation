@@ -45,4 +45,18 @@ public class GlowBackgroundTest {
         // Re-renders must never shimmer: the dither is deterministic.
         assertArrayEquals(GlowBackground.pixels(64, 16, SURFACE, GLOW), GlowBackground.pixels(64, 16, SURFACE, GLOW));
     }
+
+    @Test
+    public void legacyCornersAreRoundedAndAntialiased() {
+        int[] px = GlowBackground.pixels(W, H, SURFACE, GLOW);
+        GlowBackground.roundCorners(px, W, H, 28);
+        assertTrue((px[0] >>> 24) == 0);                         // outside the curve: transparent
+        assertTrue((px[(H / 2) * W + W / 2] >>> 24) == 0xFF);   // body: opaque
+        boolean partial = false;                                  // edge: some pixels partially covered
+        for (int x = 0; x < 28; x++) {
+            int a = px[x] >>> 24;
+            partial |= a > 0 && a < 0xFF;
+        }
+        assertTrue(partial);
+    }
 }

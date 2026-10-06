@@ -65,7 +65,7 @@ public final class WidgetRenderer {
         v.setViewVisibility(R.id.glow_box, glow ? View.VISIBLE : View.GONE);
         if (glow) {
             v.setImageViewBitmap(R.id.glow, GlowBackground.get(Math.round(widthDp), Math.round(heightDp),
-                    t.surface, t.glow));
+                    t.surface, t.glow, Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? 0 : LEGACY_RADIUS_DP));
         }
         v.setInt(R.id.glow, "setImageAlpha", config.backgroundAlpha);
         // Border: a hairline of the text color (white on dark, black on light) at low strength, so it
@@ -77,26 +77,30 @@ public final class WidgetRenderer {
         v.setInt(R.id.surface_outline, "setImageAlpha", glass ? 0x4D
                 : Math.round(BORDER_ALPHA_CLEAR + (BORDER_ALPHA_OPAQUE - BORDER_ALPHA_CLEAR) * config.backgroundAlpha / 255f));
 
+        // With a visualizer, lift the content slightly so the strip has its own space at the bottom.
+        float liftDp = config.visualizer == WidgetConfig.Visualizer.OFF ? 0 : 5;
+        float endPadDp = Math.max(4, s.pad - 6);
+        // The corner shuffle sits in the column of the rightmost transport control.
+        float columnDp = endPadDp + (config.showNext ? s.sideTouch : s.play) / 2f;
+        Corner corner = Corner.place(heightDp, liftDp, config.showNext ? s.sideIcon : s.playIcon, columnDp);
+
         // Proportions from the real cell height (Android 12+; older launchers use the XML defaults).
-        float cornerHeight = Math.max(24, Math.min(32, (heightDp - s.sideTouch) / 2 + 4));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             size(v, R.id.art_box, s.art, s.art);
             size(v, R.id.play_pause, s.play, s.play);
             size(v, R.id.previous, s.sideTouch, s.sideTouch);
             size(v, R.id.next, s.sideTouch, s.sideTouch);
-            size(v, R.id.shuffle, CORNER_WIDTH, cornerHeight);
+            size(v, R.id.shuffle, Corner.WIDTH, corner.height);
+            v.setViewLayoutMargin(R.id.shuffle, RemoteViews.MARGIN_END, corner.marginEnd, TypedValue.COMPLEX_UNIT_DIP);
         }
         int pad = px(context, s.pad);
-        // With a visualizer, lift the content slightly so the strip has its own space at the bottom.
-        int lift = config.visualizer == WidgetConfig.Visualizer.OFF ? 0 : px(context, 5);
-        v.setViewPadding(R.id.row, pad, 0, px(context, Math.max(4, s.pad - 6)), lift);
+        v.setViewPadding(R.id.row, pad, 0, px(context, endPadDp), px(context, liftDp));
         int sideInset = px(context, (s.sideTouch - s.sideIcon) / 2f);
         v.setViewPadding(R.id.previous, sideInset, sideInset, sideInset, sideInset);
         v.setViewPadding(R.id.next, sideInset, sideInset, sideInset, sideInset);
-        // Corner shuffle glyph: ~18dp, clearly secondary to the row's controls.
-        int cornerX = px(context, (CORNER_WIDTH - CORNER_GLYPH) / 2f);
-        int cornerY = px(context, Math.max(3, (cornerHeight - CORNER_GLYPH) / 2f));
-        v.setViewPadding(R.id.shuffle, cornerX, cornerY, cornerX, cornerY);
+        int cornerX = px(context, (Corner.WIDTH - corner.glyph) / 2f);
+        v.setViewPadding(R.id.shuffle, cornerX, px(context, corner.glyphTop), cornerX,
+                px(context, Math.max(0, corner.height - corner.glyphTop - corner.glyph)));
         int playInset = px(context, (s.play - s.playIcon) / 2f);
         v.setViewPadding(R.id.play_pause, playInset, playInset, playInset, playInset);
 
@@ -144,9 +148,12 @@ public final class WidgetRenderer {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ColorStateList tint = ColorStateList.valueOf(vizColor);
             v.setColorStateList(R.id.viz_bars, "setIndeterminateTintList", tint);
+            v.setColorStateList(R.id.viz_wave, "setIndeterminateTintList", tint);
         }
         v.setInt(R.id.viz_static, "setColorFilter", t.accent);
         v.setInt(R.id.viz_static, "setImageAlpha", VIZ_ALPHA);
+        v.setImageViewResource(R.id.viz_static, config.visualizer == WidgetConfig.Visualizer.WAVE
+                ? R.drawable.viz_wave_0 : R.drawable.viz_bars_0);
         setPlaying(context, v, np.playing && !nothing, config.visualizer);
 
         v.setOnClickPendingIntent(R.id.shuffle, control(context, MediaSessions.Action.SHUFFLE));
@@ -162,10 +169,10 @@ public final class WidgetRenderer {
     }
 
     private static final int VIZ_ALPHA = 0xB8;
+    /** Widget corner radius before Android 12 (values/dimens.xml widget_radius). */
+    private static final float LEGACY_RADIUS_DP = 28;
     /** Border strength over an opaque surface, and over a fully transparent one (its only outline). */
     private static final int BORDER_ALPHA_OPAQUE = 0x1C, BORDER_ALPHA_CLEAR = 0x38;
-    /** Corner shuffle target width and glyph size, dp. */
-    private static final float CORNER_WIDTH = 44, CORNER_GLYPH = 18;
 
     /**
      * Play/pause glyph and the bottom visualizer.
@@ -180,6 +187,7 @@ public final class WidgetRenderer {
         boolean show = playing && viz != WidgetConfig.Visualizer.OFF;
         boolean animate = show && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && animationsEnabled(context);
         v.setViewVisibility(R.id.viz_bars, animate && viz == WidgetConfig.Visualizer.BARS ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.viz_wave, animate && viz == WidgetConfig.Visualizer.WAVE ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.viz_static, show && !animate ? View.VISIBLE : View.GONE);
     }
 
@@ -223,6 +231,36 @@ public final class WidgetRenderer {
         return w > 0 ? w : DEFAULT_WIDTH_DP;
     }
 
+    /**
+     * Placement of the optional corner shuffle. Pure, unit-tested. All values in dp.
+     *
+     * Visible glyph and tap target are sized separately: the glyph stays restrained (15-20dp) and
+     * sits centered in the free band above the column's control glyph, while the target is a
+     * generous 56dp-wide area filling that band down to just above the control's glyph. Taps on
+     * the control's own glyph therefore always reach the control; the empty space above it belongs
+     * to shuffle.
+     */
+    static final class Corner {
+        static final float WIDTH = 56, MIN_HEIGHT = 28, MAX_HEIGHT = 40;
+        float height, glyph, glyphTop, marginEnd;
+
+        /**
+         * @param h             widget height
+         * @param lift          bottom padding of the row (row content is centered above it)
+         * @param belowGlyph    glyph size of the control under the corner
+         * @param columnFromEnd that control's center, measured from the widget's end edge
+         */
+        static Corner place(float h, float lift, float belowGlyph, float columnFromEnd) {
+            Corner c = new Corner();
+            float belowTop = (h - lift - belowGlyph) / 2;
+            c.glyph = Sizes.clamp(belowTop - 12, 15, 20);
+            c.glyphTop = Sizes.clamp((belowTop - c.glyph) / 2, 5, 10);
+            c.height = Sizes.clamp(belowTop - 2, MIN_HEIGHT, MAX_HEIGHT);
+            c.marginEnd = Math.max(2, columnFromEnd - WIDTH / 2);
+            return c;
+        }
+    }
+
     /** Proportions for one row. Pure, unit-tested. All values in dp. */
     static final class Sizes {
         float pad, art, play, playIcon, sideTouch, sideIcon;
@@ -240,7 +278,7 @@ public final class WidgetRenderer {
             return s;
         }
 
-        private static float clamp(float v, float min, float max) {
+        static float clamp(float v, float min, float max) {
             return Math.max(min, Math.min(max, v));
         }
     }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom wave (optional style): three gentle crests drifting right with a slow swell, one full
+     phase cycle per loop (seamless). 16 frames at 12.5 fps. Played by an indeterminate ProgressBar,
+     which the launcher animates itself. Hidden (GONE) whenever playback is not active. Decorative. -->
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android" android:oneshot="false">
+    <item android:drawable="@drawable/viz_wave_0" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_1" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_2" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_3" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_4" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_5" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_6" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_7" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_8" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_9" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_10" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_11" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_12" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_13" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_14" android:duration="80" />
+    <item android:drawable="@drawable/viz_wave_15" android:duration="80" />
+</animation-list>

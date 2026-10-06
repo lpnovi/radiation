@@ -29,7 +29,7 @@ public final class WidgetConfig {
     public enum Accent { ALBUM, MATERIAL_YOU, MONO }
 
     /** Decorative only: true audio reactivity isn't viable for a widget (see docs/platform-notes.md). */
-    public enum Visualizer { OFF, BARS }
+    public enum Visualizer { OFF, BARS, WAVE }
 
     public enum ArtShape { ROUNDED, CIRCLE }
 
@@ -130,7 +130,7 @@ public final class WidgetConfig {
         e.apply();
     }
 
-    /** Unknown names (e.g. WAVE, removed in 0.4) fall back to the default. */
+    /** Unknown names (e.g. a value removed in a later version) fall back to the default. */
     static <E extends Enum<E>> E parse(Class<E> type, String name, E fallback) {
         if (name == null) return fallback;
         try {

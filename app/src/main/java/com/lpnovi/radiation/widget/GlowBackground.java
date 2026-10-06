@@ -28,10 +28,13 @@ final class GlowBackground {
     private static String cachedKey;
     private static Bitmap cached;
 
-    static synchronized Bitmap get(int width, int height, int surface, int glow) {
-        String key = width + "x" + height + ":" + surface + ":" + glow;
+    /** @param cornerRadius rounds the bitmap itself (px = dp here); 0 when the host clips it instead. */
+    static synchronized Bitmap get(int width, int height, int surface, int glow, float cornerRadius) {
+        String key = width + "x" + height + ":" + surface + ":" + glow + ":" + cornerRadius;
         if (key.equals(cachedKey)) return cached;
-        Bitmap b = Bitmap.createBitmap(pixels(width, height, surface, glow), width, height, Bitmap.Config.ARGB_8888);
+        int[] px = pixels(width, height, surface, glow);
+        if (cornerRadius > 0) roundCorners(px, width, height, cornerRadius);
+        Bitmap b = Bitmap.createBitmap(px, width, height, Bitmap.Config.ARGB_8888);
         cachedKey = key;
         cached = b;
         return b;
@@ -61,6 +64,24 @@ final class GlowBackground {
             }
         }
         return out;
+    }
+
+    /**
+     * Android 8-11 can't clip the glow to the widget outline from a RemoteViews layout
+     * (clipToOutline is Android 12+), so the bitmap carries its own antialiased rounded corners.
+     */
+    static void roundCorners(int[] px, int width, int height, float radius) {
+        float r = Math.min(radius, Math.min(width, height) / 2f);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                float cx = Math.max(r - (x + 0.5f), (x + 0.5f) - (width - r));
+                float cy = Math.max(r - (y + 0.5f), (y + 0.5f) - (height - r));
+                if (cx <= 0 || cy <= 0) continue; // not in a corner square
+                float coverage = Math.max(0f, Math.min(1f, r - (float) Math.hypot(cx, cy) + 0.5f));
+                int i = y * width + x;
+                px[i] = (Math.round(coverage * 255) << 24) | (px[i] & 0x00FFFFFF);
+            }
+        }
     }
 
     private static int channel(float v) {

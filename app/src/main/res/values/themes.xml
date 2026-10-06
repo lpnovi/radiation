@@ -1,5 +1,33 @@
 <resources>
-    <style name="Theme.Radiation" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar" />
+    <!--
+      System font everywhere. Material 3 draws titles, labels, buttons and chips in "sans-serif-medium",
+      a separate family that custom device fonts (e.g. Samsung font styles) may not replace. These use
+      the default family instead and express emphasis as weight (values-v28: 500; older: bold).
+      Body and headline styles already use the default family.
+    -->
+    <style name="Theme.Radiation" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.Radiation.TitleSmall</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.Radiation.TitleMedium</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.Radiation.LabelLarge</item>
+    </style>
+
+    <style name="TextAppearance.Radiation.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Radiation.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Radiation.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 
     <style name="Studio.Card" parent="Widget.Material3.CardView.Filled">
         <item name="android:layout_marginBottom">12dp</item>

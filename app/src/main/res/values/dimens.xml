@@ -8,7 +8,7 @@
     <!-- Bottom visualizer strip: inset from the rounded corners, fades out at both ends. -->
     <dimen name="viz_height">12dp</dimen>
     <dimen name="viz_inset">22dp</dimen>
-    <!-- Corner shuffle: a compact target in the space above the "next" button. -->
-    <dimen name="corner_touch_width">44dp</dimen>
-    <dimen name="corner_touch_height">30dp</dimen>
+    <!-- Corner shuffle (Android Corner shuffle: a compact target in the space above the "next" button.lt; 12 defaults; sized from the real row on 12+). -->
+    <dimen name="corner_touch_width">56dp</dimen>
+    <dimen name="corner_touch_height">32dp</dimen>
 </resources>

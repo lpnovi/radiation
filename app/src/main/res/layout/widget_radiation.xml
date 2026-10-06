@@ -33,6 +33,7 @@
         android:layout_height="match_parent"
         android:background="@drawable/surface_clip"
         android:clipToOutline="true"
+        tools:targetApi="31"
         android:visibility="gone">
 
         <ImageView
@@ -53,13 +54,19 @@
         android:visibility="gone" />
 
     <!--
-      Bottom visualizer: animated ProgressBar, plus a still frame for reduced motion / Android < 12.
+      Bottom visualizer: one animated ProgressBar per style (RemoteViews can't swap an indeterminate
+      drawable), plus a still frame for reduced motion / Android < 12.
       Inset from the corners and faded at both ends so it reads as part of the surface.
     -->
     <ProgressBar
         android:id="@+id/viz_bars"
         style="@style/Widget.Visualizer"
         android:indeterminateDrawable="@drawable/viz_bars" />
+
+    <ProgressBar
+        android:id="@+id/viz_wave"
+        style="@style/Widget.Visualizer"
+        android:indeterminateDrawable="@drawable/viz_wave" />
 
     <ImageView
         android:id="@+id/viz_static"
@@ -131,7 +138,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:fontFamily="sans-serif-medium"
+                android:textFontWeight="500"
+                tools:targetApi="28"
+                android:textStyle="bold"
                 android:includeFontPadding="false"
                 android:maxLines="1"
                 android:text="@string/nothing_playing"
@@ -187,19 +196,21 @@
     </LinearLayout>
 
     <!--
-      Optional shuffle: a small secondary control tucked into the top-right corner, above the
-      controls, so it never takes width from the title. Sized at runtime to the space above "next".
+      Optional shuffle: a secondary control in the top-right corner, in the column of the rightmost
+      transport control, so it never takes width from the title. Its target fills the free space above
+      that control (sized at runtime on Android 12+); the glyph stays small.
     -->
     <ImageButton
         android:id="@+id/shuffle"
         android:layout_width="@dimen/corner_touch_width"
         android:layout_height="@dimen/corner_touch_height"
         android:layout_gravity="top|end"
-        android:layout_marginEnd="6dp"
+        android:layout_marginEnd="4dp"
         android:background="@drawable/ripple_on_dark"
         android:contentDescription="@string/shuffle"
-        android:paddingHorizontal="13dp"
-        android:paddingVertical="6dp"
+        android:paddingHorizontal="18dp"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_shuffle_off_state"
         android:tint="#FFFFFFFF"

@@ -21,6 +21,34 @@ public class SizesTest {
         }
     }
 
+    /** Corner shuffle: generous target, restrained glyph, never on top of the control below it. */
+    @Test
+    public void cornerShuffleFitsAboveTheNextButton() {
+        for (float lift : new float[]{0, 5}) {
+            for (float h = 80; h <= 140; h += 4) {
+                WidgetRenderer.Sizes s = WidgetRenderer.Sizes.forHeight(h);
+                WidgetRenderer.Corner c = WidgetRenderer.Corner.place(h, lift, s.sideIcon, 8 + s.sideTouch / 2);
+                float nextGlyphTop = (h - lift - s.sideIcon) / 2;
+                assertTrue("target width", c.height >= 28 && WidgetRenderer.Corner.WIDTH >= 56);
+                assertTrue("glyph 15-20dp at " + h, c.glyph >= 15 && c.glyph <= 20);
+                assertTrue("glyph inset from top edge at " + h, c.glyphTop >= 5);
+                assertTrue("visible gap above next glyph at " + h,
+                        c.glyphTop + c.glyph <= nextGlyphTop - 4);
+                assertTrue("target stops above next glyph at " + h, c.height <= nextGlyphTop - 2
+                        || c.height == 28);
+                assertTrue("secondary to next", c.glyph < s.sideIcon);
+            }
+        }
+    }
+
+    @Test
+    public void cornerShuffleCentersOverTheNextColumn() {
+        WidgetRenderer.Corner c = WidgetRenderer.Corner.place(100, 5, 27, 32);
+        assertTrue(Math.abs(c.marginEnd + WidgetRenderer.Corner.WIDTH / 2 - 32) < 0.01f);
+        // Never pressed against the edge, even when the column is very close to it.
+        assertTrue(WidgetRenderer.Corner.place(100, 5, 27, 10).marginEnd >= 2);
+    }
+
     @Test
     public void typicalOneUiRowGetsComfortableTargets() {
         WidgetRenderer.Sizes s = WidgetRenderer.Sizes.forHeight(96);

@@ -53,8 +53,10 @@
 
     <!-- Visualizer -->
     <string name="section_visualizer">Visualizer</string>
-    <string name="viz_bars">Animated bars</string>
-    <string name="hint_visualizer">Subtle bars along the bottom edge while music plays. Decorative: Android gives widgets no safe way to follow the actual audio. Drawn by your launcher, so it costs Radiation nothing while running.</string>
+    <string name="viz_off">Off</string>
+    <string name="viz_bars">Bars</string>
+    <string name="viz_wave">Wave</string>
+    <string name="hint_visualizer">Subtle motion along the bottom edge while music plays. Decorative: Android gives widgets no safe way to follow the actual audio. Drawn by your launcher, so it costs Radiation nothing while running.</string>
 
     <!-- Layout -->
     <string name="section_layout">Layout</string>

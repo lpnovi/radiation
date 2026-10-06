@@ -1,0 +1,23 @@
+<resources>
+    <!-- Android 9+: medium weight of the system font instead of bold (see values/themes.xml). -->
+    <style name="TextAppearance.Radiation.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textFontWeight">500</item>
+    </style>
+
+    <style name="TextAppearance.Radiation.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textFontWeight">500</item>
+    </style>
+
+    <style name="TextAppearance.Radiation.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textFontWeight">500</item>
+    </style>
+</resources>

@@ -52,8 +52,10 @@ public class WidgetConfigTest {
     }
 
     @Test
-    public void removedWaveVisualizerFallsBackToBars() {
+    public void unknownStoredValueFallsBackToDefault() {
         assertEquals(WidgetConfig.Visualizer.BARS,
+                WidgetConfig.parse(WidgetConfig.Visualizer.class, "SPECTRUM", WidgetConfig.Visualizer.BARS));
+        assertEquals(WidgetConfig.Visualizer.WAVE,
                 WidgetConfig.parse(WidgetConfig.Visualizer.class, "WAVE", WidgetConfig.Visualizer.BARS));
     }
 }
