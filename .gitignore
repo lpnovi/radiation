@@ -1,0 +1,26 @@
+# Gradle / build
+.gradle/
+build/
+.kotlin/
+
+# Local machine config (SDK path, signing)
+local.properties
+*.keystore
+*.jks
+keystore.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
