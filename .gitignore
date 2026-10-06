@@ -13,6 +13,9 @@ keystore.properties
 .idea/
 *.iml
 .vscode/
+.project
+.classpath
+.settings/
 captures/
 .externalNativeBuild/
 .cxx/
