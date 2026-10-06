@@ -342,31 +342,14 @@
                             style="@style/Studio.Section"
                             android:text="@string/section_visualizer" />
 
-                        <com.google.android.material.button.MaterialButtonToggleGroup
-                            android:id="@+id/viz_group"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            app:selectionRequired="true"
-                            app:singleSelection="true">
-
-                            <Button
-                                android:id="@+id/viz_off"
-                                style="@style/Studio.Segment"
-                                android:text="@string/viz_off" />
-
-                            <Button
-                                android:id="@+id/viz_wave"
-                                style="@style/Studio.Segment"
-                                android:text="@string/viz_wave" />
-
-                            <Button
-                                android:id="@+id/viz_bars"
-                                style="@style/Studio.Segment"
-                                android:text="@string/viz_bars" />
-                        </com.google.android.material.button.MaterialButtonToggleGroup>
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/show_visualizer"
+                            style="@style/Studio.Switch"
+                            android:text="@string/viz_bars" />
 
                         <TextView
                             style="@style/Studio.Hint"
+                            android:layout_marginTop="0dp"
                             android:text="@string/hint_visualizer" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>

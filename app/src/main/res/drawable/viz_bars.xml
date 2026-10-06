@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bottom bars: 12 frames at 10 fps, one full phase cycle per loop (seamless). Played by an indeterminate ProgressBar, which the launcher animates itself:
-     no app wakeups, no widget updates. Hidden (GONE) whenever playback isn't active. -->
+<!-- Bottom bars: 44 bars, each with its own phase and an integer speed (1-3 cycles per loop), so
+     they move independently like a spectrum yet loop seamlessly. 16 frames at 12.5 fps.
+     Played by an indeterminate ProgressBar, which the launcher animates itself: no app wakeups,
+     no widget updates. Hidden (GONE) whenever playback is not active. Decorative, not audio-driven. -->
 <animation-list xmlns:android="http://schemas.android.com/apk/res/android" android:oneshot="false">
-    <item android:drawable="@drawable/viz_bars_0" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_1" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_2" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_3" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_4" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_5" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_6" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_7" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_8" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_9" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_10" android:duration="100" />
-    <item android:drawable="@drawable/viz_bars_11" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_0" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_1" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_2" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_3" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_4" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_5" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_6" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_7" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_8" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_9" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_10" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_11" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_12" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_13" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_14" android:duration="80" />
+    <item android:drawable="@drawable/viz_bars_15" android:duration="80" />
 </animation-list>

@@ -4,7 +4,7 @@
   so WidgetRenderer sets every dynamic property on every render; nothing relies on XML defaults
   after the first update.
 
-  Layers, back to front: surface -> glow (album gradient) -> outline -> visualizer strip -> content.
+  Layers, back to front: surface or glow -> border -> visualizer strip -> content row -> corner shuffle.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -23,14 +23,25 @@
         android:src="@drawable/widget_bg"
         android:tint="#FF000000" />
 
-    <ImageView
-        android:id="@+id/surface_glow"
+    <!--
+      Album Glow: one dithered bitmap that replaces the surface (not layered on it, so the rounded
+      edge is antialiased once), clipped to the widget's rounded outline.
+    -->
+    <FrameLayout
+        android:id="@+id/glow_box"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:importantForAccessibility="no"
-        android:scaleType="fitXY"
-        android:src="@drawable/surface_glow"
-        android:visibility="gone" />
+        android:background="@drawable/surface_clip"
+        android:clipToOutline="true"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/glow"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY" />
+    </FrameLayout>
 
     <ImageView
         android:id="@+id/surface_outline"
@@ -38,19 +49,13 @@
         android:layout_height="match_parent"
         android:importantForAccessibility="no"
         android:scaleType="fitXY"
-        android:src="@drawable/surface_outline"
+        android:src="@drawable/border_light"
         android:visibility="gone" />
 
     <!--
-      Bottom visualizer. One animated ProgressBar per style (RemoteViews can't swap an indeterminate
-      drawable), plus a static frame for reduced motion / Android < 12. Inset from the corners and
-      faded at both ends so it reads as part of the surface, not a separate bar.
+      Bottom visualizer: animated ProgressBar, plus a still frame for reduced motion / Android < 12.
+      Inset from the corners and faded at both ends so it reads as part of the surface.
     -->
-    <ProgressBar
-        android:id="@+id/viz_wave"
-        style="@style/Widget.Visualizer"
-        android:indeterminateDrawable="@drawable/viz_wave" />
-
     <ProgressBar
         android:id="@+id/viz_bars"
         style="@style/Widget.Visualizer"
@@ -65,7 +70,7 @@
         android:layout_marginBottom="2dp"
         android:importantForAccessibility="no"
         android:scaleType="fitXY"
-        android:src="@drawable/viz_wave_0"
+        android:src="@drawable/viz_bars_0"
         android:visibility="gone" />
 
     <LinearLayout
@@ -147,18 +152,6 @@
         </LinearLayout>
 
         <ImageButton
-            android:id="@+id/shuffle"
-            android:layout_width="@dimen/side_touch"
-            android:layout_height="@dimen/side_touch"
-            android:background="@drawable/ripple_on_dark"
-            android:contentDescription="@string/shuffle"
-            android:padding="12dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_shuffle_off_state"
-            android:tint="#FFFFFFFF"
-            android:visibility="gone" />
-
-        <ImageButton
             android:id="@+id/previous"
             android:layout_width="@dimen/side_touch"
             android:layout_height="@dimen/side_touch"
@@ -192,4 +185,23 @@
             android:src="@drawable/ic_skip_next_state"
             android:tint="#FFFFFFFF" />
     </LinearLayout>
+
+    <!--
+      Optional shuffle: a small secondary control tucked into the top-right corner, above the
+      controls, so it never takes width from the title. Sized at runtime to the space above "next".
+    -->
+    <ImageButton
+        android:id="@+id/shuffle"
+        android:layout_width="@dimen/corner_touch_width"
+        android:layout_height="@dimen/corner_touch_height"
+        android:layout_gravity="top|end"
+        android:layout_marginEnd="6dp"
+        android:background="@drawable/ripple_on_dark"
+        android:contentDescription="@string/shuffle"
+        android:paddingHorizontal="13dp"
+        android:paddingVertical="6dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_shuffle_off_state"
+        android:tint="#FFFFFFFF"
+        android:visibility="gone" />
 </FrameLayout>

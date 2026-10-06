@@ -1,15 +1,14 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="300dp" android:height="10dp"
-    android:viewportWidth="300" android:viewportHeight="10">
-    <path android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M3,8.6V5.92M9,8.6V5.42M15,8.6V6.40M21,8.6V7.44M27,8.6V6.48M33,8.6V3.78M39,8.6V2.09M45,8.6V3.22M51,8.6V5.87M57,8.6V7.55M63,8.6V7.60M69,8.6V7.33M75,8.6V7.61M81,8.6V7.97M87,8.6V7.95M93,8.6V7.89M99,8.6V7.82M105,8.6V6.88M111,8.6V4.85M117,8.6V3.35M123,8.6V4.11M129,8.6V6.35M135,8.6V7.37M141,8.6V5.95M147,8.6V3.99M153,8.6V3.88M159,8.6V5.63M165,8.6V7.33M171,8.6V7.91M177,8.6V7.94M183,8.6V8.00M189,8.6V7.81M195,8.6V7.30M201,8.6V7.18M207,8.6V7.62M213,8.6V7.28M219,8.6V5.14M225,8.6V2.56M231,8.6V2.15M237,8.6V4.40M243,8.6V6.92M249,8.6V7.38M255,8.6V6.29M261,8.6V5.75M267,8.6V6.52M273,8.6V7.56M279,8.6V7.97M285,8.6V8.00M291,8.6V7.88M297,8.6V7.16">
-        <!-- White with faded ends; tinting (SRC_IN / SRC_ATOP) keeps this alpha, so the strip melts into the edges. -->
+    android:width="300dp" android:height="12dp"
+    android:viewportWidth="300" android:viewportHeight="12">
+    <path android:strokeWidth="2.6" android:strokeLineCap="round"
+        android:pathData="M4.0,10.8V4.86M10.8,10.8V4.31M17.6,10.8V4.57M24.4,10.8V5.21M31.2,10.8V6.87M38.0,10.8V5.00M44.8,10.8V5.45M51.6,10.8V7.56M58.4,10.8V5.92M65.2,10.8V5.27M72.0,10.8V3.03M78.8,10.8V3.68M85.6,10.8V6.26M92.4,10.8V3.50M99.2,10.8V6.32M106.0,10.8V5.59M112.8,10.8V7.78M119.6,10.8V6.36M126.4,10.8V3.95M133.2,10.8V4.91M140.0,10.8V5.35M146.8,10.8V4.70M153.6,10.8V6.09M160.4,10.8V7.74M167.2,10.8V7.14M174.0,10.8V6.02M180.8,10.8V4.32M187.6,10.8V5.96M194.4,10.8V6.02M201.2,10.8V4.24M208.0,10.8V3.60M214.8,10.8V4.34M221.6,10.8V4.25M228.4,10.8V3.50M235.2,10.8V3.64M242.0,10.8V3.75M248.8,10.8V4.75M255.6,10.8V7.97M262.4,10.8V3.97M269.2,10.8V4.14M276.0,10.8V5.00M282.8,10.8V5.03M289.6,10.8V5.83M296.4,10.8V4.42">
         <aapt:attr name="android:strokeColor">
             <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="300" android:endY="0">
                 <item android:offset="0" android:color="#00FFFFFF" />
-                <item android:offset="0.22" android:color="#FFFFFFFF" />
-                <item android:offset="0.78" android:color="#FFFFFFFF" />
+                <item android:offset="0.2" android:color="#FFFFFFFF" />
+                <item android:offset="0.8" android:color="#FFFFFFFF" />
                 <item android:offset="1" android:color="#00FFFFFF" />
             </gradient>
         </aapt:attr>

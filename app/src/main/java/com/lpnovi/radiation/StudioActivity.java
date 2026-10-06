@@ -63,7 +63,6 @@ public class StudioActivity extends AppCompatActivity {
     private static final int[] BACKGROUND_HINTS = {R.string.hint_bg_album_tint, R.string.hint_bg_album_gradient,
             R.string.hint_bg_amoled, R.string.hint_bg_material_you, R.string.hint_bg_glass, R.string.hint_bg_custom};
     private static final int[] ACCENTS = {R.id.accent_album, R.id.accent_material_you, R.id.accent_mono};
-    private static final int[] VISUALIZERS = {R.id.viz_off, R.id.viz_wave, R.id.viz_bars};
     private static final int[] ART_SHAPES = {R.id.art_rounded, R.id.art_circle};
     private static final int[] TAP_ACTIONS = {R.id.tap_active, R.id.tap_spotify, R.id.tap_nothing};
 
@@ -86,11 +85,11 @@ public class StudioActivity extends AppCompatActivity {
     private FrameLayout preview;
     private View previewContent;
     private ChipGroup picker, backgrounds;
-    private MaterialButtonToggleGroup accents, visualizers, artShapes, tapActions;
+    private MaterialButtonToggleGroup accents, artShapes, tapActions;
     private Slider opacity;
     private TextView opacityValue, backgroundHint;
     private LinearLayout swatches;
-    private MaterialSwitch outline, showArt, showArtist, showPrevious, showNext, showShuffle;
+    private MaterialSwitch outline, showArt, showArtist, showPrevious, showNext, showShuffle, showVisualizer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -121,7 +120,7 @@ public class StudioActivity extends AppCompatActivity {
         picker = findViewById(R.id.widget_picker);
         backgrounds = findViewById(R.id.bg_group);
         accents = findViewById(R.id.accent_group);
-        visualizers = findViewById(R.id.viz_group);
+        showVisualizer = findViewById(R.id.show_visualizer);
         artShapes = findViewById(R.id.art_shape_group);
         tapActions = findViewById(R.id.tap_group);
         opacity = findViewById(R.id.opacity);
@@ -161,7 +160,8 @@ public class StudioActivity extends AppCompatActivity {
             });
         });
         onChoice(accents, ACCENTS, i -> edit(() -> config.accent = Accent.values()[i]));
-        onChoice(visualizers, VISUALIZERS, i -> edit(() -> config.visualizer = Visualizer.values()[i]));
+        showVisualizer.setOnCheckedChangeListener((b, on) ->
+                edit(() -> config.visualizer = on ? Visualizer.BARS : Visualizer.OFF));
         onChoice(artShapes, ART_SHAPES, i -> edit(() -> config.artShape = ArtShape.values()[i]));
         onChoice(tapActions, TAP_ACTIONS, i -> edit(() -> config.tapAction = TapAction.values()[i]));
         opacity.addOnChangeListener((s, value, fromUser) -> {
@@ -248,7 +248,7 @@ public class StudioActivity extends AppCompatActivity {
         binding = true;
         backgrounds.check(BACKGROUNDS[config.background.ordinal()]);
         accents.check(ACCENTS[config.accent.ordinal()]);
-        visualizers.check(VISUALIZERS[config.visualizer.ordinal()]);
+        showVisualizer.setChecked(config.visualizer != Visualizer.OFF);
         artShapes.check(ART_SHAPES[config.artShape.ordinal()]);
         tapActions.check(TAP_ACTIONS[config.tapAction.ordinal()]);
         outline.setChecked(config.outline);
@@ -337,10 +337,12 @@ public class StudioActivity extends AppCompatActivity {
         if (preview == null) return;
         Context app = getApplicationContext(); // AppCompat's inflater would swap in views RemoteViews rejects
         AppWidgetManager manager = AppWidgetManager.getInstance(this);
-        float heightDp = widgetId == AppWidgetManager.INVALID_APPWIDGET_ID
+        boolean placed = widgetId != AppWidgetManager.INVALID_APPWIDGET_ID;
+        float widthDp = placed ? WidgetRenderer.widthDp(this, manager, widgetId) : 320;
+        float heightDp = !placed
                 ? 80 : WidgetRenderer.heightDp(this, manager, widgetId);
         RemoteViews views = WidgetRenderer.build(app, widgetId, config, WidgetUpdater.latest(),
-                MediaSessions.hasAccess(this), heightDp);
+                MediaSessions.hasAccess(this), widthDp, heightDp);
         ViewGroup.LayoutParams lp = preview.getLayoutParams();
         int heightPx = Math.round(heightDp * getResources().getDisplayMetrics().density);
         if (lp.height != heightPx) {

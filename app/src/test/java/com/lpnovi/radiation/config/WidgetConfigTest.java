@@ -28,7 +28,7 @@ public class WidgetConfigTest {
         assertEquals(WidgetConfig.Background.ALBUM_TINT, c.background);
         assertEquals(WidgetConfig.Accent.ALBUM, c.accent);
         assertEquals(255, c.backgroundAlpha);
-        assertEquals(WidgetConfig.Visualizer.WAVE, c.visualizer);
+        assertEquals(WidgetConfig.Visualizer.BARS, c.visualizer);
         assertFalse(c.showShuffle);
         assertFalse(c.outline);
     }
@@ -49,5 +49,11 @@ public class WidgetConfigTest {
         album.applyLegacyStyle("ALBUM");
         assertEquals(WidgetConfig.Background.ALBUM_TINT, album.background);
         assertEquals(WidgetConfig.Accent.ALBUM, album.accent);
+    }
+
+    @Test
+    public void removedWaveVisualizerFallsBackToBars() {
+        assertEquals(WidgetConfig.Visualizer.BARS,
+                WidgetConfig.parse(WidgetConfig.Visualizer.class, "WAVE", WidgetConfig.Visualizer.BARS));
     }
 }

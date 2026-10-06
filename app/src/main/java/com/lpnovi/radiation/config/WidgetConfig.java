@@ -28,7 +28,8 @@ public final class WidgetConfig {
     /** Color of the controls and visualizer. */
     public enum Accent { ALBUM, MATERIAL_YOU, MONO }
 
-    public enum Visualizer { OFF, WAVE, BARS }
+    /** Decorative only: true audio reactivity isn't viable for a widget (see docs/platform-notes.md). */
+    public enum Visualizer { OFF, BARS }
 
     public enum ArtShape { ROUNDED, CIRCLE }
 
@@ -40,7 +41,7 @@ public final class WidgetConfig {
     public int backgroundAlpha = 255;
     public boolean outline = false;
     public Accent accent = Accent.ALBUM;
-    public Visualizer visualizer = Visualizer.WAVE;
+    public Visualizer visualizer = Visualizer.BARS;
     public boolean showArt = true;
     public ArtShape artShape = ArtShape.ROUNDED;
     public boolean showArtist = true;
@@ -129,8 +130,8 @@ public final class WidgetConfig {
         e.apply();
     }
 
-    /** Unknown names (e.g. a value removed in a later version) fall back to the default. */
-    private static <E extends Enum<E>> E parse(Class<E> type, String name, E fallback) {
+    /** Unknown names (e.g. WAVE, removed in 0.4) fall back to the default. */
+    static <E extends Enum<E>> E parse(Class<E> type, String name, E fallback) {
         if (name == null) return fallback;
         try {
             return Enum.valueOf(type, name);

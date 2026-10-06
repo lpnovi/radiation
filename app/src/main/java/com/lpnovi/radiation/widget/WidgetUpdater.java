@@ -110,7 +110,8 @@ public final class WidgetUpdater {
         boolean access = MediaSessions.hasAccess(context);
         for (int id : widgetIds(context)) {
             manager.updateAppWidget(id, WidgetRenderer.build(context, id, WidgetConfig.load(context, id),
-                    np, access, WidgetRenderer.heightDp(context, manager, id)));
+                    np, access, WidgetRenderer.widthDp(context, manager, id),
+                    WidgetRenderer.heightDp(context, manager, id)));
         }
     }
 

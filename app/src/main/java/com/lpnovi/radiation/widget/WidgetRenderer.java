@@ -41,11 +41,12 @@ import com.lpnovi.radiation.media.Shuffle;
 public final class WidgetRenderer {
 
     static final float DEFAULT_HEIGHT_DP = 80;
+    static final float DEFAULT_WIDTH_DP = 320;
 
     private WidgetRenderer() {}
 
     public static RemoteViews build(Context context, int appWidgetId, WidgetConfig config,
-                                    NowPlaying np, boolean hasAccess, float heightDp) {
+                                    NowPlaying np, boolean hasAccess, float widthDp, float heightDp) {
         RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_radiation);
         ColorEngine.Inputs in = new ColorEngine.Inputs();
         in.seed = np.seed;
@@ -53,36 +54,49 @@ public final class WidgetRenderer {
         in.myBg = context.getColor(R.color.my_bg);
         in.myAccent = context.getColor(R.color.my_control);
         ColorEngine.Theme t = ColorEngine.theme(config, in);
-        Sizes s = Sizes.forHeight(heightDp, config.showShuffle);
+        Sizes s = Sizes.forHeight(heightDp);
 
-        // Background layers: the only things background opacity affects.
+        // Background layers: the only things background opacity affects. Album Glow replaces the
+        // plain surface with one dithered bitmap (see GlowBackground) rather than layering on it.
+        boolean glow = t.glow != ColorEngine.NONE;
+        v.setViewVisibility(R.id.surface, glow ? View.GONE : View.VISIBLE);
         v.setInt(R.id.surface, "setColorFilter", t.surface);
         v.setInt(R.id.surface, "setImageAlpha", config.backgroundAlpha);
-        v.setViewVisibility(R.id.surface_glow, t.glow != ColorEngine.NONE ? View.VISIBLE : View.GONE);
-        v.setInt(R.id.surface_glow, "setColorFilter", t.glow);
-        v.setInt(R.id.surface_glow, "setImageAlpha", config.backgroundAlpha);
+        v.setViewVisibility(R.id.glow_box, glow ? View.VISIBLE : View.GONE);
+        if (glow) {
+            v.setImageViewBitmap(R.id.glow, GlowBackground.get(Math.round(widthDp), Math.round(heightDp),
+                    t.surface, t.glow));
+        }
+        v.setInt(R.id.glow, "setImageAlpha", config.backgroundAlpha);
+        // Border: a hairline of the text color (white on dark, black on light) at low strength, so it
+        // defines the edge without graying the surface. Slightly stronger when the surface is
+        // translucent, where it is the only thing outlining the widget.
         boolean glass = config.background == WidgetConfig.Background.GLASS;
         v.setViewVisibility(R.id.surface_outline, config.outline || glass ? View.VISIBLE : View.GONE);
-        v.setInt(R.id.surface_outline, "setColorFilter", t.text);
-        v.setInt(R.id.surface_outline, "setImageAlpha", glass ? 0x47 : 0x30);
+        v.setImageViewResource(R.id.surface_outline, t.darkForeground ? R.drawable.border_dark : R.drawable.border_light);
+        v.setInt(R.id.surface_outline, "setImageAlpha", glass ? 0x4D
+                : Math.round(BORDER_ALPHA_CLEAR + (BORDER_ALPHA_OPAQUE - BORDER_ALPHA_CLEAR) * config.backgroundAlpha / 255f));
 
         // Proportions from the real cell height (Android 12+; older launchers use the XML defaults).
+        float cornerHeight = Math.max(24, Math.min(32, (heightDp - s.sideTouch) / 2 + 4));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             size(v, R.id.art_box, s.art, s.art);
             size(v, R.id.play_pause, s.play, s.play);
-            size(v, R.id.shuffle, s.sideTouch, s.sideTouch);
             size(v, R.id.previous, s.sideTouch, s.sideTouch);
             size(v, R.id.next, s.sideTouch, s.sideTouch);
+            size(v, R.id.shuffle, CORNER_WIDTH, cornerHeight);
         }
         int pad = px(context, s.pad);
         // With a visualizer, lift the content slightly so the strip has its own space at the bottom.
-        int lift = config.visualizer == WidgetConfig.Visualizer.OFF ? 0 : px(context, 4);
+        int lift = config.visualizer == WidgetConfig.Visualizer.OFF ? 0 : px(context, 5);
         v.setViewPadding(R.id.row, pad, 0, px(context, Math.max(4, s.pad - 6)), lift);
         int sideInset = px(context, (s.sideTouch - s.sideIcon) / 2f);
         v.setViewPadding(R.id.previous, sideInset, sideInset, sideInset, sideInset);
         v.setViewPadding(R.id.next, sideInset, sideInset, sideInset, sideInset);
-        int shuffleInset = px(context, (s.sideTouch - s.sideIcon * 0.92f) / 2f);
-        v.setViewPadding(R.id.shuffle, shuffleInset, shuffleInset, shuffleInset, shuffleInset);
+        // Corner shuffle glyph: ~18dp, clearly secondary to the row's controls.
+        int cornerX = px(context, (CORNER_WIDTH - CORNER_GLYPH) / 2f);
+        int cornerY = px(context, Math.max(3, (cornerHeight - CORNER_GLYPH) / 2f));
+        v.setViewPadding(R.id.shuffle, cornerX, cornerY, cornerX, cornerY);
         int playInset = px(context, (s.play - s.playIcon) / 2f);
         v.setViewPadding(R.id.play_pause, playInset, playInset, playInset, playInset);
 
@@ -129,13 +143,10 @@ public final class WidgetRenderer {
         int vizColor = (t.accent & 0x00FFFFFF) | VIZ_ALPHA << 24;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ColorStateList tint = ColorStateList.valueOf(vizColor);
-            v.setColorStateList(R.id.viz_wave, "setIndeterminateTintList", tint);
             v.setColorStateList(R.id.viz_bars, "setIndeterminateTintList", tint);
         }
         v.setInt(R.id.viz_static, "setColorFilter", t.accent);
         v.setInt(R.id.viz_static, "setImageAlpha", VIZ_ALPHA);
-        v.setImageViewResource(R.id.viz_static, config.visualizer == WidgetConfig.Visualizer.BARS
-                ? R.drawable.viz_bars_0 : R.drawable.viz_wave_0);
         setPlaying(context, v, np.playing && !nothing, config.visualizer);
 
         v.setOnClickPendingIntent(R.id.shuffle, control(context, MediaSessions.Action.SHUFFLE));
@@ -151,6 +162,10 @@ public final class WidgetRenderer {
     }
 
     private static final int VIZ_ALPHA = 0xB8;
+    /** Border strength over an opaque surface, and over a fully transparent one (its only outline). */
+    private static final int BORDER_ALPHA_OPAQUE = 0x1C, BORDER_ALPHA_CLEAR = 0x38;
+    /** Corner shuffle target width and glyph size, dp. */
+    private static final float CORNER_WIDTH = 44, CORNER_GLYPH = 18;
 
     /**
      * Play/pause glyph and the bottom visualizer.
@@ -164,7 +179,6 @@ public final class WidgetRenderer {
         v.setImageViewResource(R.id.play_pause, playing ? R.drawable.ic_pause_state : R.drawable.ic_play_state);
         boolean show = playing && viz != WidgetConfig.Visualizer.OFF;
         boolean animate = show && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && animationsEnabled(context);
-        v.setViewVisibility(R.id.viz_wave, animate && viz == WidgetConfig.Visualizer.WAVE ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.viz_bars, animate && viz == WidgetConfig.Visualizer.BARS ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.viz_static, show && !animate ? View.VISIBLE : View.GONE);
     }
@@ -199,11 +213,21 @@ public final class WidgetRenderer {
         return h > 0 ? h : DEFAULT_HEIGHT_DP;
     }
 
+    /** Portrait uses the min width, landscape the max width (AppWidget options convention). */
+    public static float widthDp(Context context, AppWidgetManager manager, int appWidgetId) {
+        Bundle o = manager.getAppWidgetOptions(appWidgetId);
+        boolean landscape = context.getResources().getConfiguration().orientation
+                == Configuration.ORIENTATION_LANDSCAPE;
+        int w = o.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
+                : AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
+        return w > 0 ? w : DEFAULT_WIDTH_DP;
+    }
+
     /** Proportions for one row. Pure, unit-tested. All values in dp. */
     static final class Sizes {
         float pad, art, play, playIcon, sideTouch, sideIcon;
 
-        static Sizes forHeight(float h, boolean shuffle) {
+        static Sizes forHeight(float h) {
             Sizes s = new Sizes();
             s.pad = clamp(h * 0.15f, 8, 14);
             float inner = h - 2 * s.pad;
@@ -213,12 +237,6 @@ public final class WidgetRenderer {
             s.playIcon = Math.min(clamp(inner * 0.6f, 30, 38), s.play - 8);
             s.sideTouch = Math.min(48, Math.max(inner, 36));
             s.sideIcon = clamp(s.playIcon * 0.72f, 22, 27);
-            if (shuffle) {
-                // A fourth control: tighten targets (still >= 44dp where the row allows) to spare the title.
-                s.sideTouch = Math.min(s.sideTouch, 44);
-                s.play = Math.min(s.play, 52);
-                s.playIcon = Math.min(s.playIcon, s.play - 8);
-            }
             return s;
         }
 

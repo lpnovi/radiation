@@ -39,7 +39,7 @@
     <string name="hint_bg_glass">A light haze over your wallpaper with a hairline edge. Works best translucent.</string>
     <string name="hint_bg_custom">A solid color of your choice. Text adapts automatically.</string>
     <string name="background_opacity">Opacity</string>
-    <string name="outline">Outline</string>
+    <string name="outline">Border</string>
 
     <!-- Controls -->
     <string name="section_controls">Controls</string>
@@ -49,14 +49,12 @@
     <string name="show_previous">Previous</string>
     <string name="show_next">Next</string>
     <string name="show_shuffle">Shuffle</string>
-    <string name="hint_shuffle">Works with players that support it, including Spotify. Takes a little room from the title.</string>
+    <string name="hint_shuffle">A small button in the top-right corner, for players that support it (Spotify included).</string>
 
     <!-- Visualizer -->
     <string name="section_visualizer">Visualizer</string>
-    <string name="viz_off">Off</string>
-    <string name="viz_wave">Wave</string>
-    <string name="viz_bars">Bars</string>
-    <string name="hint_visualizer">Moves along the bottom edge only while music plays. Drawn by your launcher, so it costs Radiation nothing while running.</string>
+    <string name="viz_bars">Animated bars</string>
+    <string name="hint_visualizer">Subtle bars along the bottom edge while music plays. Decorative: Android gives widgets no safe way to follow the actual audio. Drawn by your launcher, so it costs Radiation nothing while running.</string>
 
     <!-- Layout -->
     <string name="section_layout">Layout</string>
