@@ -1,6 +1,8 @@
 <resources>
     <dimen name="widget_radius">28dp</dimen>
-    <dimen name="art_size">44dp</dimen>
-    <dimen name="art_radius">12dp</dimen>
-    <dimen name="control_size">44dp</dimen>
+    <!-- Defaults for Android < 12; on 12+ WidgetRenderer sizes these from the real cell height. -->
+    <dimen name="art_size">56dp</dimen>
+    <dimen name="art_radius">14dp</dimen>
+    <dimen name="play_size">52dp</dimen>
+    <dimen name="side_touch">48dp</dimen>
 </resources>

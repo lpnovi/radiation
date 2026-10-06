@@ -1,21 +1,33 @@
-﻿<resources>
+<resources>
     <style name="Theme.Radiation" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar" />
+
+    <style name="Studio.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="android:layout_marginBottom">12dp</item>
+        <item name="cardCornerRadius">24dp</item>
+    </style>
 
     <style name="Studio.Section" parent="">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginHorizontal">8dp</item>
-        <item name="android:layout_marginTop">24dp</item>
-        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:layout_marginBottom">12dp</item>
         <item name="android:textAppearance">?attr/textAppearanceTitleSmall</item>
         <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+
+    <style name="Studio.Segment" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
     </style>
 
     <style name="Studio.Switch" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:paddingHorizontal">8dp</item>
-        <item name="android:minHeight">56dp</item>
+        <item name="android:minHeight">52dp</item>
         <item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
     </style>
 </resources>

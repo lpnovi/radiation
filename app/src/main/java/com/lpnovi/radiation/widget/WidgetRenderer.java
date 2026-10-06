@@ -1,101 +1,186 @@
 package com.lpnovi.radiation.widget;
 
 import android.app.PendingIntent;
+import android.app.WallpaperColors;
+import android.app.WallpaperManager;
 import android.appwidget.AppWidgetManager;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Shader;
-import android.media.MediaMetadata;
-import android.media.session.MediaController;
+import android.os.Build;
+import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.RemoteViews;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import com.lpnovi.radiation.R;
 import com.lpnovi.radiation.StudioActivity;
+import com.lpnovi.radiation.color.ColorEngine;
 import com.lpnovi.radiation.config.WidgetConfig;
 import com.lpnovi.radiation.media.MediaSessions;
+import com.lpnovi.radiation.media.NowPlaying;
 
-/** Turns (current media session, per-widget config) into RemoteViews. Shared by the widget and the studio preview. */
+/**
+ * (NowPlaying, per-widget config, cell height) -> RemoteViews. Shared by the home-screen widget
+ * and the studio preview. Sets every dynamic property on every call, because hosts may reapply
+ * an update onto the previous view tree.
+ */
 public final class WidgetRenderer {
+
+    static final float DEFAULT_HEIGHT_DP = 80;
 
     private WidgetRenderer() {}
 
-    public static void updateAll(Context context) {
-        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        int[] ids = manager.getAppWidgetIds(new ComponentName(context, RadiationWidgetProvider.class));
-        if (ids.length == 0) return;
-        MediaController controller = MediaSessions.active(context);
-        boolean access = MediaSessions.hasAccess(context);
-        for (int id : ids) {
-            manager.updateAppWidget(id, build(context, id, WidgetConfig.load(context, id), controller, access));
-        }
-    }
-
     public static RemoteViews build(Context context, int appWidgetId, WidgetConfig config,
-                                    @Nullable MediaController controller, boolean hasAccess) {
+                                    NowPlaying np, boolean hasAccess, float heightDp) {
         RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_radiation);
-        Palette p = Palette.of(context, config);
+        ColorEngine.Theme t = ColorEngine.theme(config.style, config.backgroundAlpha, np.seed,
+                wallpaperColor(context), context.getColor(R.color.my_bg), context.getColor(R.color.my_control));
+        Sizes s = Sizes.forHeight(heightDp);
 
-        v.setInt(R.id.background, "setColorFilter", p.background);
-        v.setInt(R.id.background, "setImageAlpha", config.backgroundAlpha);
-        v.setTextColor(R.id.title, p.text);
-        v.setTextColor(R.id.artist, p.textSecondary);
-        v.setInt(R.id.previous, "setColorFilter", p.control);
-        v.setInt(R.id.next, "setColorFilter", p.control);
-        v.setInt(R.id.play_pause_bg, "setColorFilter", p.control);
-        v.setInt(R.id.play_pause_icon, "setColorFilter", p.background);
-        v.setViewVisibility(R.id.art, config.showArt ? View.VISIBLE : View.GONE);
+        // Surface: the only thing background opacity affects.
+        v.setInt(R.id.surface, "setColorFilter", t.surface);
+        v.setInt(R.id.surface, "setImageAlpha", config.backgroundAlpha);
+
+        // Proportions from the real cell height (Android 12+; older launchers use the XML defaults).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            size(v, R.id.art_box, s.art, s.art);
+            size(v, R.id.play_pause, s.play, s.play);
+            size(v, R.id.previous, s.sideTouch, s.sideTouch);
+            size(v, R.id.next, s.sideTouch, s.sideTouch);
+        }
+        int pad = px(context, s.pad);
+        v.setViewPadding(R.id.row, pad, 0, px(context, Math.max(4, s.pad - 6)), 0);
+        int sideInset = px(context, (s.sideTouch - s.sideIcon) / 2f);
+        v.setViewPadding(R.id.previous, sideInset, sideInset, sideInset, sideInset);
+        v.setViewPadding(R.id.next, sideInset, sideInset, sideInset, sideInset);
+        int playInset = px(context, (s.play - s.playIcon) / 2f);
+        v.setViewPadding(R.id.play_pause_icon, playInset, playInset, playInset, playInset);
+
+        // Text.
+        boolean nothing = TextUtils.isEmpty(np.title);
+        v.setTextViewText(R.id.title, nothing ? context.getText(R.string.nothing_playing) : np.title);
+        v.setTextViewText(R.id.artist, nothing
+                ? context.getText(hasAccess ? R.string.app_name : R.string.tap_to_connect)
+                : np.artist == null ? "" : np.artist);
+        v.setTextColor(R.id.title, t.text);
+        v.setTextColor(R.id.artist, t.textSecondary);
+
+        // Artwork vs fallback tile: separate views, so the tile's tint can never leak onto artwork.
+        v.setViewVisibility(R.id.art_box, config.showArt ? View.VISIBLE : View.GONE);
+        Bitmap art = config.showArt && np.art != null
+                ? Rounded.get(np, px(context, s.art), px(context, 14)) : null;
+        v.setViewVisibility(R.id.art, art != null ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.placeholder_tile, art != null ? View.GONE : View.VISIBLE);
+        v.setViewVisibility(R.id.placeholder_icon, art != null ? View.GONE : View.VISIBLE);
+        if (art != null) v.setImageViewBitmap(R.id.art, art);
+        v.setInt(R.id.placeholder_tile, "setColorFilter", t.placeholder);
+        v.setInt(R.id.placeholder_icon, "setColorFilter", t.textSecondary);
+        int iconInset = px(context, s.art * 0.28f);
+        v.setViewPadding(R.id.placeholder_icon, iconInset, iconInset, iconInset, iconInset);
+
+        // Controls.
+        int ripple = t.darkForeground ? R.drawable.ripple_on_light : R.drawable.ripple_on_dark;
+        v.setInt(R.id.previous, "setBackgroundResource", ripple);
+        v.setInt(R.id.next, "setBackgroundResource", ripple);
+        v.setInt(R.id.previous, "setColorFilter", t.accent);
+        v.setInt(R.id.next, "setColorFilter", t.accent);
+        v.setInt(R.id.play_pause_disc, "setColorFilter", t.accent);
+        v.setInt(R.id.play_pause_icon, "setColorFilter", t.onAccent);
         v.setViewVisibility(R.id.previous, config.showPrevious ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.next, config.showNext ? View.VISIBLE : View.GONE);
-
-        MediaMetadata meta = controller == null ? null : controller.getMetadata();
-        CharSequence title = meta == null ? null : meta.getText(MediaMetadata.METADATA_KEY_TITLE);
-        CharSequence artist = meta == null ? null : firstNonEmpty(
-                meta.getText(MediaMetadata.METADATA_KEY_ARTIST),
-                meta.getText(MediaMetadata.METADATA_KEY_ALBUM_ARTIST));
-        if (TextUtils.isEmpty(title)) {
-            v.setTextViewText(R.id.title, context.getText(R.string.nothing_playing));
-            v.setTextViewText(R.id.artist, context.getText(hasAccess ? R.string.app_name : R.string.tap_to_connect));
-        } else {
-            v.setTextViewText(R.id.title, title);
-            v.setTextViewText(R.id.artist, artist == null ? "" : artist);
-        }
-
-        Bitmap art = config.showArt && meta != null ? Artwork.get(context, meta) : null;
-        if (art != null) {
-            v.setImageViewBitmap(R.id.art, art);
-            v.setViewPadding(R.id.art, 0, 0, 0, 0);
-        } else {
-            v.setImageViewResource(R.id.art, R.drawable.ic_music_note);
-            int pad = Math.round(11 * context.getResources().getDisplayMetrics().density);
-            v.setViewPadding(R.id.art, pad, pad, pad, pad);
-            v.setInt(R.id.art, "setColorFilter", p.textSecondary);
-        }
-
-        boolean playing = MediaSessions.isPlaying(controller);
-        v.setImageViewResource(R.id.play_pause_icon, playing ? R.drawable.ic_pause : R.drawable.ic_play);
+        setPlayGlyph(v, np.playing);
 
         v.setOnClickPendingIntent(R.id.previous, control(context, MediaSessions.Action.PREVIOUS));
         v.setOnClickPendingIntent(R.id.play_pause, control(context, MediaSessions.Action.PLAY_PAUSE));
         v.setOnClickPendingIntent(R.id.next, control(context, MediaSessions.Action.NEXT));
 
-        PendingIntent open = openIntent(context, appWidgetId, config, controller, hasAccess);
-        if (open != null) {
-            v.setOnClickPendingIntent(R.id.root, open);
-            v.setOnClickPendingIntent(R.id.art, open);
-            v.setOnClickPendingIntent(R.id.info, open);
-        }
+        PendingIntent open = openIntent(context, appWidgetId, config, np, hasAccess);
+        v.setOnClickPendingIntent(android.R.id.background, open);
+        v.setOnClickPendingIntent(R.id.art_box, open);
+        v.setOnClickPendingIntent(R.id.info, open);
         return v;
+    }
+
+    static void setPlayGlyph(RemoteViews v, boolean playing) {
+        v.setImageViewResource(R.id.play_pause_icon, playing ? R.drawable.ic_pause_state : R.drawable.ic_play_state);
+    }
+
+    /** Portrait uses the max height, landscape the min height (AppWidget options convention). */
+    public static float heightDp(Context context, AppWidgetManager manager, int appWidgetId) {
+        Bundle o = manager.getAppWidgetOptions(appWidgetId);
+        boolean landscape = context.getResources().getConfiguration().orientation
+                == Configuration.ORIENTATION_LANDSCAPE;
+        int h = o.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
+                : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
+        return h > 0 ? h : DEFAULT_HEIGHT_DP;
+    }
+
+    /** Proportions for one row. Pure, unit-tested. All values in dp. */
+    static final class Sizes {
+        float pad, art, play, playIcon, sideTouch, sideIcon;
+
+        static Sizes forHeight(float h) {
+            Sizes s = new Sizes();
+            s.pad = clamp(h * 0.15f, 8, 14);
+            float inner = h - 2 * s.pad;
+            s.art = clamp(inner, 36, 66);
+            // Focal point: as large as the row allows, at least a 44dp target, at most 58dp.
+            s.play = Math.min(clamp(inner * 0.88f, 44, 58), Math.max(inner, 36));
+            s.playIcon = s.play * 0.46f;
+            s.sideTouch = Math.min(48, Math.max(inner, 36));
+            s.sideIcon = clamp(s.play * 0.5f, 22, 30);
+            return s;
+        }
+
+        private static float clamp(float v, float min, float max) {
+            return Math.max(min, Math.min(max, v));
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private static void size(RemoteViews v, int id, float w, float h) {
+        v.setViewLayoutWidth(id, w, TypedValue.COMPLEX_UNIT_DIP);
+        v.setViewLayoutHeight(id, h, TypedValue.COMPLEX_UNIT_DIP);
+    }
+
+    private static int px(Context context, float dp) {
+        return Math.round(dp * context.getResources().getDisplayMetrics().density);
+    }
+
+    private static volatile int wallpaper = 0;
+
+    /** Wallpaper primary color, so contrast is right when the background is translucent. */
+    public static int wallpaperColor(Context context) {
+        int cached = wallpaper;
+        if (cached != 0) return cached;
+        int color = ColorEngine.UNKNOWN_WALLPAPER;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            try {
+                WallpaperColors wc = WallpaperManager.getInstance(context)
+                        .getWallpaperColors(WallpaperManager.FLAG_SYSTEM);
+                if (wc != null) color = wc.getPrimaryColor().toArgb() | 0xFF000000;
+            } catch (RuntimeException ignored) {
+                // Some OEM builds restrict this; the dark default is the common case anyway.
+            }
+        }
+        wallpaper = color;
+        return color;
+    }
+
+    /** Called when the wallpaper's colors change. */
+    public static void invalidateWallpaper() {
+        wallpaper = 0;
     }
 
     private static PendingIntent control(Context context, MediaSessions.Action action) {
@@ -108,9 +193,10 @@ public final class WidgetRenderer {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
+    /** Null means "tap does nothing"; RemoteViews then clears any previous click handler. */
     @Nullable
     private static PendingIntent openIntent(Context context, int appWidgetId, WidgetConfig config,
-                                            @Nullable MediaController controller, boolean hasAccess) {
+                                            NowPlaying np, boolean hasAccess) {
         if (!hasAccess) return activity(context, appWidgetId, studioIntent(context, appWidgetId));
         switch (config.tapAction) {
             case NOTHING:
@@ -123,13 +209,12 @@ public final class WidgetRenderer {
             default:
                 break;
         }
-        if (controller == null) return activity(context, appWidgetId, studioIntent(context, appWidgetId));
+        if (np.packageName == null) return activity(context, appWidgetId, studioIntent(context, appWidgetId));
         // The player's own intent opens it on its "now playing" screen.
-        PendingIntent session = controller.getSessionActivity();
-        if (session != null) return session;
+        if (np.sessionActivity != null) return np.sessionActivity;
         Intent launch = new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_LAUNCHER)
-                .setPackage(controller.getPackageName());
+                .setPackage(np.packageName);
         return activity(context, appWidgetId, launch);
     }
 
@@ -144,66 +229,25 @@ public final class WidgetRenderer {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    @Nullable
-    private static CharSequence firstNonEmpty(CharSequence a, CharSequence b) {
-        return TextUtils.isEmpty(a) ? b : a;
-    }
+    /** Rounded artwork at the exact pixel size shown; recomputed only when art or size changes. */
+    static final class Rounded {
+        private static String key;
+        private static Bitmap bitmap;
 
-    /** Resolved colors for one render. The color engine (album-art-derived palettes) will plug in here. */
-    static final class Palette {
-        int background, text, textSecondary, control;
-
-        static Palette of(Context context, WidgetConfig config) {
-            Palette p = new Palette();
-            if (config.style == WidgetConfig.Style.MATERIAL_YOU) {
-                // ponytail: dynamic colors are resolved at render time; the listener service re-renders on config change.
-                p.background = context.getColor(R.color.my_bg);
-                p.text = context.getColor(R.color.my_text);
-                p.textSecondary = context.getColor(R.color.my_text_secondary);
-                p.control = context.getColor(R.color.my_control);
-            } else {
-                p.background = Color.BLACK;
-                p.text = Color.WHITE;
-                p.textSecondary = 0x99FFFFFF;
-                p.control = Color.WHITE;
-            }
-            return p;
-        }
-    }
-
-    /** Scales and rounds album art once per track; RemoteViews bitmaps must stay small. */
-    static final class Artwork {
-        private static String cachedKey;
-        private static Bitmap cached;
-
-        @Nullable
-        static synchronized Bitmap get(Context context, MediaMetadata meta) {
-            String key = meta.getString(MediaMetadata.METADATA_KEY_TITLE) + '\u0000'
-                    + meta.getString(MediaMetadata.METADATA_KEY_ARTIST) + '\u0000'
-                    + meta.getString(MediaMetadata.METADATA_KEY_ALBUM);
-            if (key.equals(cachedKey)) return cached;
-            Bitmap src = meta.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
-            if (src == null) src = meta.getBitmap(MediaMetadata.METADATA_KEY_ART);
-            if (src == null) src = meta.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
-            cachedKey = key;
-            cached = src == null ? null : rounded(src,
-                    context.getResources().getDimensionPixelSize(R.dimen.art_size),
-                    context.getResources().getDimension(R.dimen.art_radius));
-            return cached;
-        }
-
-        /** Center-crops src to a size×size square with rounded corners. */
-        private static Bitmap rounded(Bitmap src, int size, float radius) {
-            Bitmap out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        static synchronized Bitmap get(NowPlaying np, int sizePx, int radiusPx) {
+            String k = np.artKey + "@" + sizePx + "/" + radiusPx;
+            if (k.equals(key)) return bitmap;
+            Bitmap src = np.art;
+            Bitmap out = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888);
             BitmapShader shader = new BitmapShader(src, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-            float scale = (float) size / Math.min(src.getWidth(), src.getHeight());
             Matrix m = new Matrix();
-            m.setScale(scale, scale);
-            m.postTranslate((size - src.getWidth() * scale) / 2f, (size - src.getHeight() * scale) / 2f);
+            m.setScale((float) sizePx / src.getWidth(), (float) sizePx / src.getHeight());
             shader.setLocalMatrix(m);
             Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
             paint.setShader(shader);
-            new Canvas(out).drawRoundRect(0, 0, size, size, radius, radius, paint);
+            new Canvas(out).drawRoundRect(0, 0, sizePx, sizePx, radiusPx, radiusPx, paint);
+            key = k;
+            bitmap = out;
             return out;
         }
     }

@@ -1,28 +1,34 @@
 package com.lpnovi.radiation.media;
 
+import android.app.WallpaperManager;
 import android.content.ComponentName;
 import android.content.res.Configuration;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.service.notification.NotificationListenerService;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.lpnovi.radiation.widget.WidgetRenderer;
+import com.lpnovi.radiation.widget.WidgetUpdater;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Exists because Android only exposes other apps' media sessions to enabled notification listeners.
- * Notifications themselves are ignored. While bound, it re-renders widgets on session changes
- * instead of polling.
+ * Notifications themselves are ignored. While bound, it requests a render on every session,
+ * metadata or playback change instead of polling. All callbacks are unregistered on disconnect.
  */
 public class MediaListenerService extends NotificationListenerService {
 
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private MediaSessionManager sessionManager;
     private final List<MediaController> watched = new ArrayList<>();
 
@@ -45,33 +51,60 @@ public class MediaListenerService extends NotificationListenerService {
 
     private final MediaSessionManager.OnActiveSessionsChangedListener sessionsListener = this::watch;
 
+    private final WallpaperManager.OnColorsChangedListener wallpaperListener = (colors, which) -> {
+        WidgetRenderer.invalidateWallpaper();
+        render();
+    };
+
     @Override
     public void onListenerConnected() {
         ComponentName self = new ComponentName(this, MediaListenerService.class);
         sessionManager = getSystemService(MediaSessionManager.class);
-        sessionManager.addOnActiveSessionsChangedListener(sessionsListener, self);
+        sessionManager.addOnActiveSessionsChangedListener(sessionsListener, self, handler);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            WallpaperManager.getInstance(this).addOnColorsChangedListener(wallpaperListener, handler);
+        }
         watch(sessionManager.getActiveSessions(self));
     }
 
     @Override
     public void onListenerDisconnected() {
-        if (sessionManager != null) sessionManager.removeOnActiveSessionsChangedListener(sessionsListener);
-        watch(null);
+        release();
+        render();
+    }
+
+    @Override
+    public void onDestroy() {
+        release();
+        super.onDestroy();
     }
 
     /** Dark mode and Material You palette changes arrive as configuration changes. */
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        WidgetRenderer.invalidateWallpaper();
         render();
     }
 
+    private void release() {
+        if (sessionManager != null) {
+            sessionManager.removeOnActiveSessionsChangedListener(sessionsListener);
+            sessionManager = null;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            WallpaperManager.getInstance(this).removeOnColorsChangedListener(wallpaperListener);
+        }
+        watch(null);
+    }
+
+    /** Re-registers on the current session list; controllers from the old list are released. */
     private void watch(@Nullable List<MediaController> controllers) {
         for (MediaController c : watched) c.unregisterCallback(callback);
         watched.clear();
         if (controllers != null) {
             for (MediaController c : controllers) {
-                c.registerCallback(callback);
+                c.registerCallback(callback, handler);
                 watched.add(c);
             }
         }
@@ -79,6 +112,6 @@ public class MediaListenerService extends NotificationListenerService {
     }
 
     private void render() {
-        WidgetRenderer.updateAll(this);
+        WidgetUpdater.request(this);
     }
 }

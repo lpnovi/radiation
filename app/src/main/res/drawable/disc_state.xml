@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pressed: the disc shrinks slightly and dims, then eases back on release. Tinted at runtime. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:exitFadeDuration="160">
+    <item android:state_pressed="true">
+        <inset android:inset="3dp">
+            <shape android:shape="oval">
+                <solid android:color="#D9FFFFFF" />
+            </shape>
+        </inset>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFFFF" />
+        </shape>
+    </item>
+</selector>

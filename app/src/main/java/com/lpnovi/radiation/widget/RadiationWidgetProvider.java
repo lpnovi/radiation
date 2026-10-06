@@ -4,6 +4,8 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.media.session.MediaController;
+import android.os.Bundle;
 
 import com.lpnovi.radiation.config.WidgetConfig;
 import com.lpnovi.radiation.media.MediaSessions;
@@ -17,9 +19,13 @@ public class RadiationWidgetProvider extends AppWidgetProvider {
     public void onReceive(Context context, Intent intent) {
         if (ACTION_CONTROL.equals(intent.getAction())) {
             String name = intent.getStringExtra(EXTRA_ACTION);
-            if (name != null) {
-                MediaSessions.perform(context, MediaSessions.Action.valueOf(name));
+            if (name == null) return;
+            MediaSessions.Action action = MediaSessions.Action.valueOf(name);
+            if (action == MediaSessions.Action.PLAY_PAUSE) {
+                MediaController c = MediaSessions.active(context);
+                if (c != null) WidgetUpdater.showOptimisticPlayState(context, !MediaSessions.isPlaying(c));
             }
+            MediaSessions.perform(context, action);
             return;
         }
         super.onReceive(context, intent);
@@ -27,7 +33,14 @@ public class RadiationWidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] appWidgetIds) {
-        WidgetRenderer.updateAll(context);
+        WidgetUpdater.request(context, goAsync());
+    }
+
+    /** Resized, or moved to a launcher with different cell sizes. */
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int appWidgetId,
+                                          Bundle newOptions) {
+        WidgetUpdater.request(context, goAsync());
     }
 
     @Override

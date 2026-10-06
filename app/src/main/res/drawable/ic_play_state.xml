@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pressed: the glyph shrinks (inset is scaled into the same box). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:exitFadeDuration="160">
+    <item android:state_pressed="true">
+        <inset android:drawable="@drawable/ic_play" android:inset="2.5dp" />
+    </item>
+    <item android:drawable="@drawable/ic_play" />
+</selector>

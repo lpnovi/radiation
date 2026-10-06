@@ -11,17 +11,27 @@ import android.content.SharedPreferences;
  */
 public final class WidgetConfig {
 
-    public enum Style { AMOLED, MATERIAL_YOU }
+    /** ALBUM: AMOLED base whose surface tint and controls follow the current artwork. */
+    public enum Style { ALBUM, AMOLED, MATERIAL_YOU }
 
     public enum TapAction { ACTIVE_APP, SPOTIFY, NOTHING }
 
-    public Style style = Style.AMOLED;
-    /** 0–255. */
+    public Style style = Style.ALBUM;
+    /** Background layer only, 0 (transparent) – 255 (opaque). Never applied to foreground. */
     public int backgroundAlpha = 255;
     public boolean showArt = true;
     public boolean showPrevious = true;
     public boolean showNext = true;
     public TapAction tapAction = TapAction.ACTIVE_APP;
+
+    /** 0% = transparent background, 100% = fully opaque background. */
+    public static int alphaFromPercent(int percent) {
+        return Math.round(Math.max(0, Math.min(100, percent)) * 255 / 100f);
+    }
+
+    public static int percentFromAlpha(int alpha) {
+        return Math.round(Math.max(0, Math.min(255, alpha)) * 100 / 255f);
+    }
 
     private static final String PREFS = "widgets";
 

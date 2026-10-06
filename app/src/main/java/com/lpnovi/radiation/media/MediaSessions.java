@@ -48,13 +48,33 @@ public final class MediaSessions {
      */
     static int pick(int[] states) {
         for (int i = 0; i < states.length; i++) {
-            if (states[i] == PlaybackState.STATE_PLAYING) return i;
+            if (isActiveState(states[i])) return i;
         }
         return states.length > 0 ? 0 : -1;
     }
 
     public static boolean isPlaying(@Nullable MediaController controller) {
-        return controller != null && stateOf(controller) == PlaybackState.STATE_PLAYING;
+        return controller != null && isActiveState(stateOf(controller));
+    }
+
+    /**
+     * Playing, or about to be (buffering, skipping, seeking). Treating transitional states as playing
+     * keeps the pause icon steady through a track change instead of flickering to play.
+     */
+    static boolean isActiveState(int state) {
+        switch (state) {
+            case PlaybackState.STATE_PLAYING:
+            case PlaybackState.STATE_BUFFERING:
+            case PlaybackState.STATE_CONNECTING:
+            case PlaybackState.STATE_SKIPPING_TO_NEXT:
+            case PlaybackState.STATE_SKIPPING_TO_PREVIOUS:
+            case PlaybackState.STATE_SKIPPING_TO_QUEUE_ITEM:
+            case PlaybackState.STATE_FAST_FORWARDING:
+            case PlaybackState.STATE_REWINDING:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private static int stateOf(MediaController controller) {

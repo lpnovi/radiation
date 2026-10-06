@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: a scriptable fake player for exercising widget transitions on an emulator. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <receiver
+            android:name=".debug.DebugPlayer"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="com.lpnovi.radiation.debug.PLAYER" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
