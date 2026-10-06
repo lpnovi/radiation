@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- RemoteViews layout: only framework views allowed. Colors/visibility are set by WidgetRenderer. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:ignore="UseAppTint">
+
+    <ImageView
+        android:id="@+id/background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bg"
+        android:tint="#FF000000" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="6dp">
+
+        <ImageView
+            android:id="@+id/art"
+            android:layout_width="@dimen/art_size"
+            android:layout_height="@dimen/art_size"
+            android:background="@drawable/art_placeholder"
+            android:contentDescription="@string/album_art"
+            android:padding="11dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_music_note" />
+
+        <LinearLayout
+            android:id="@+id/info"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="4dp">
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:text="@string/nothing_playing"
+                android:textColor="#FFFFFFFF"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/app_name"
+                android:textColor="#99FFFFFF"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/previous"
+            android:layout_width="@dimen/control_size"
+            android:layout_height="@dimen/control_size"
+            android:background="@drawable/ripple_control"
+            android:contentDescription="@string/previous"
+            android:scaleType="center"
+            android:src="@drawable/ic_skip_previous"
+            android:tint="#FFFFFFFF" />
+
+        <!-- Play/pause is emphasized: a filled disc in the control color with the icon cut out in the background color. -->
+        <FrameLayout
+            android:id="@+id/play_pause"
+            android:layout_width="@dimen/control_size"
+            android:layout_height="@dimen/control_size"
+            android:layout_marginHorizontal="2dp"
+            android:contentDescription="@string/play_pause"
+            android:foreground="@drawable/ripple_control">
+
+            <ImageView
+                android:id="@+id/play_pause_bg"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:padding="2dp"
+                android:src="@drawable/circle"
+                android:tint="#FFFFFFFF" />
+
+            <ImageView
+                android:id="@+id/play_pause_icon"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="center"
+                android:src="@drawable/ic_play"
+                android:tint="#FF000000" />
+        </FrameLayout>
+
+        <ImageButton
+            android:id="@+id/next"
+            android:layout_width="@dimen/control_size"
+            android:layout_height="@dimen/control_size"
+            android:background="@drawable/ripple_control"
+            android:contentDescription="@string/next"
+            android:scaleType="center"
+            android:src="@drawable/ic_skip_next"
+            android:tint="#FFFFFFFF" />
+    </LinearLayout>
+</FrameLayout>

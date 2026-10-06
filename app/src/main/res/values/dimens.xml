@@ -1,0 +1,6 @@
+<resources>
+    <dimen name="widget_radius">28dp</dimen>
+    <dimen name="art_size">44dp</dimen>
+    <dimen name="art_radius">12dp</dimen>
+    <dimen name="control_size">44dp</dimen>
+</resources>

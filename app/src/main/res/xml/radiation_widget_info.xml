@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Canonical 4x1. minWidth/minHeight use the legacy (70n - 30)dp cell formula; targetCell* is used on Android 12+. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.lpnovi.radiation.StudioActivity"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/widget_radiation"
+    android:minWidth="250dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:previewLayout="@layout/widget_radiation"
+    android:resizeMode="horizontal"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

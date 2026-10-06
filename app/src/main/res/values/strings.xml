@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">Radiation</string>
+    <string name="widget_label">Radiation</string>
+    <string name="widget_description">A clean 4×1 media widget</string>
+    <string name="nothing_playing">Nothing playing</string>
+    <string name="tap_to_connect">Tap to connect Radiation</string>
+    <string name="previous">Previous</string>
+    <string name="play_pause">Play or pause</string>
+    <string name="next">Next</string>
+    <string name="album_art">Album art</string>
+
+    <string name="studio_subtitle">Widget Studio</string>
+    <string name="access_title">See what\'s playing</string>
+    <string name="access_body">To show the title, artist and artwork from Spotify and other players, Android requires Radiation to have notification access. Radiation only reads media sessions. It never reads, stores or sends your notifications, and it has no internet access. Playback controls work without it.</string>
+    <string name="access_restricted_hint">If the switch is greyed out, open Radiation\'s App info, tap ⋮ and choose “Allow restricted settings” first.</string>
+    <string name="access_grant">Grant access</string>
+    <string name="no_widgets">Add Radiation from your home screen\'s widget picker, then style it here.</string>
+    <string name="widget_n">Widget %d</string>
+    <string name="section_style">Style</string>
+    <string name="style_amoled">AMOLED</string>
+    <string name="style_material_you">Material You</string>
+    <string name="background_opacity">Background opacity</string>
+    <string name="section_layout">Layout</string>
+    <string name="show_art">Album art</string>
+    <string name="show_previous">Previous button</string>
+    <string name="show_next">Next button</string>
+    <string name="section_tap">Tapping the widget opens</string>
+    <string name="tap_active">Current player</string>
+    <string name="tap_spotify">Spotify</string>
+    <string name="tap_nothing">Nothing</string>
+    <string name="done">Done</string>
+</resources>

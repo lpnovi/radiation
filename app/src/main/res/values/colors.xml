@@ -1,0 +1,6 @@
+<resources>
+    <color name="my_bg">#FF1C1B1F</color>
+    <color name="my_text">#FFE6E1E5</color>
+    <color name="my_text_secondary">#FFCAC4D0</color>
+    <color name="my_control">#FFD0BCFF</color>
+</resources>
