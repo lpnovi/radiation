@@ -4,11 +4,12 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
-import android.media.session.MediaController;
 import android.os.Bundle;
 
 import com.lpnovi.radiation.config.WidgetConfig;
 import com.lpnovi.radiation.media.MediaSessions;
+import com.lpnovi.radiation.media.NowPlaying;
+import com.lpnovi.radiation.media.Shuffle;
 
 public class RadiationWidgetProvider extends AppWidgetProvider {
 
@@ -21,9 +22,11 @@ public class RadiationWidgetProvider extends AppWidgetProvider {
             String name = intent.getStringExtra(EXTRA_ACTION);
             if (name == null) return;
             MediaSessions.Action action = MediaSessions.Action.valueOf(name);
+            NowPlaying now = WidgetUpdater.latest();
             if (action == MediaSessions.Action.PLAY_PAUSE) {
-                MediaController c = MediaSessions.active(context);
-                if (c != null) WidgetUpdater.showOptimisticPlayState(context, !MediaSessions.isPlaying(c));
+                WidgetUpdater.showOptimistic(context, now.withPlaying(!now.playing));
+            } else if (action == MediaSessions.Action.SHUFFLE && now.shuffle != Shuffle.UNSUPPORTED) {
+                WidgetUpdater.showOptimistic(context, now.withShuffle(now.shuffle == Shuffle.ON ? Shuffle.OFF : Shuffle.ON));
             }
             MediaSessions.perform(context, action);
             return;

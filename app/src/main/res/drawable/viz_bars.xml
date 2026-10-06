@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom bars: 12 frames at 10 fps, one full phase cycle per loop (seamless). Played by an indeterminate ProgressBar, which the launcher animates itself:
+     no app wakeups, no widget updates. Hidden (GONE) whenever playback isn't active. -->
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android" android:oneshot="false">
+    <item android:drawable="@drawable/viz_bars_0" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_1" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_2" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_3" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_4" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_5" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_6" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_7" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_8" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_9" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_10" android:duration="100" />
+    <item android:drawable="@drawable/viz_bars_11" android:duration="100" />
+</animation-list>

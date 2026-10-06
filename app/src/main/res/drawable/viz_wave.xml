@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom wave: 12 frames at ~11 fps, one full phase cycle per loop (seamless). Played by an indeterminate ProgressBar, which the launcher animates itself:
+     no app wakeups, no widget updates. Hidden (GONE) whenever playback isn't active. -->
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android" android:oneshot="false">
+    <item android:drawable="@drawable/viz_wave_0" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_1" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_2" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_3" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_4" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_5" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_6" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_7" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_8" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_9" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_10" android:duration="90" />
+    <item android:drawable="@drawable/viz_wave_11" android:duration="90" />
+</animation-list>

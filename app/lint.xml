@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Visualizer frames are wide but only ~900x30 px when rasterized, cached once per frame. -->
+    <issue id="VectorRaster">
+        <ignore path="src/main/res/drawable/viz_*.xml" />
+    </issue>
+    <!-- androidx.media 1.8 deprecates the compat classes in favor of Media3, whose controller pulls in
+         Guava and several MB for one shuffle toggle. 1.7 speaks the same session protocol. -->
+    <issue id="GradleDependency">
+        <ignore regexp="androidx.media:media" />
+    </issue>
+</lint>

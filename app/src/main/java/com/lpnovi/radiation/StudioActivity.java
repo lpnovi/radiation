@@ -5,12 +5,14 @@ import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.RemoteViews;
 import android.widget.TextView;
 
@@ -21,9 +23,15 @@ import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
 import com.lpnovi.radiation.config.WidgetConfig;
+import com.lpnovi.radiation.config.WidgetConfig.Accent;
+import com.lpnovi.radiation.config.WidgetConfig.ArtShape;
+import com.lpnovi.radiation.config.WidgetConfig.Background;
+import com.lpnovi.radiation.config.WidgetConfig.TapAction;
+import com.lpnovi.radiation.config.WidgetConfig.Visualizer;
 import com.lpnovi.radiation.media.MediaListenerService;
 import com.lpnovi.radiation.media.MediaSessions;
 import com.lpnovi.radiation.widget.RadiationWidgetProvider;
@@ -31,6 +39,7 @@ import com.lpnovi.radiation.widget.WidgetRenderer;
 import com.lpnovi.radiation.widget.WidgetUpdater;
 
 import java.util.Arrays;
+import java.util.function.IntConsumer;
 
 /**
  * Widget Studio: launcher entry point and the widget's configure activity.
@@ -39,25 +48,49 @@ import java.util.Arrays;
  * fixed in configure mode); {@link #config} is the source of truth for its settings. Config is
  * read from storage only when the edited widget changes, and every edit writes through to
  * storage, updates the preview in place and asks the home-screen widget to re-render.
+ *
+ * Every enum setting is a single-choice group whose view ids are listed in the enum's order, so
+ * adding an option means adding one id here and one enum constant.
  */
 public class StudioActivity extends AppCompatActivity {
 
     public static final String EXTRA_EDIT_WIDGET = "com.lpnovi.radiation.EDIT_WIDGET";
     private static final String STATE_WIDGET = "widget";
 
+    // View ids in enum order.
+    private static final int[] BACKGROUNDS = {R.id.bg_album_tint, R.id.bg_album_gradient, R.id.bg_amoled,
+            R.id.bg_material_you, R.id.bg_glass, R.id.bg_custom};
+    private static final int[] BACKGROUND_HINTS = {R.string.hint_bg_album_tint, R.string.hint_bg_album_gradient,
+            R.string.hint_bg_amoled, R.string.hint_bg_material_you, R.string.hint_bg_glass, R.string.hint_bg_custom};
+    private static final int[] ACCENTS = {R.id.accent_album, R.id.accent_material_you, R.id.accent_mono};
+    private static final int[] VISUALIZERS = {R.id.viz_off, R.id.viz_wave, R.id.viz_bars};
+    private static final int[] ART_SHAPES = {R.id.art_rounded, R.id.art_circle};
+    private static final int[] TAP_ACTIONS = {R.id.tap_active, R.id.tap_spotify, R.id.tap_nothing};
+
+    /** Custom background swatches: deep tones that keep light text, and two light ones that flip it. */
+    private static final int[] SWATCHES = {0xFF000000, 0xFF1C1B1F, 0xFF0F1B2D, 0xFF12261E, 0xFF2A1630,
+            0xFF3A1A12, 0xFF2E3440, 0xFFE9E3D8, 0xFFE6EBF0};
+    private static final String[] SWATCH_NAMES = {"Black", "Graphite", "Midnight", "Forest", "Plum",
+            "Ember", "Slate", "Sand", "Mist"};
+    /** Glass reads as glass only when translucent; picking it from fully opaque starts here. */
+    private static final int GLASS_DEFAULT_PERCENT = 40;
+
     private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
     private boolean configuring;
     private WidgetConfig config = new WidgetConfig();
     /** Suppresses control listeners while controls are populated from config. */
     private boolean binding;
+    /** Picking Glass lowered opacity on its own; leaving Glass may put it back. */
+    private boolean glassLoweredOpacity;
 
     private FrameLayout preview;
     private View previewContent;
-    private MaterialButtonToggleGroup styleGroup, tapGroup;
+    private ChipGroup picker, backgrounds;
+    private MaterialButtonToggleGroup accents, visualizers, artShapes, tapActions;
     private Slider opacity;
-    private TextView opacityValue, styleHint;
-    private MaterialSwitch showArt, showPrevious, showNext;
-    private ChipGroup picker;
+    private TextView opacityValue, backgroundHint;
+    private LinearLayout swatches;
+    private MaterialSwitch outline, showArt, showArtist, showPrevious, showNext, showShuffle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,14 +119,21 @@ public class StudioActivity extends AppCompatActivity {
 
         preview = findViewById(R.id.preview);
         picker = findViewById(R.id.widget_picker);
-        styleGroup = findViewById(R.id.style_group);
-        tapGroup = findViewById(R.id.tap_group);
+        backgrounds = findViewById(R.id.bg_group);
+        accents = findViewById(R.id.accent_group);
+        visualizers = findViewById(R.id.viz_group);
+        artShapes = findViewById(R.id.art_shape_group);
+        tapActions = findViewById(R.id.tap_group);
         opacity = findViewById(R.id.opacity);
         opacityValue = findViewById(R.id.opacity_value);
-        styleHint = findViewById(R.id.style_hint);
+        backgroundHint = findViewById(R.id.bg_hint);
+        swatches = findViewById(R.id.swatches);
+        outline = findViewById(R.id.outline);
         showArt = findViewById(R.id.show_art);
+        showArtist = findViewById(R.id.show_artist);
         showPrevious = findViewById(R.id.show_previous);
         showNext = findViewById(R.id.show_next);
+        showShuffle = findViewById(R.id.show_shuffle);
 
         findViewById(R.id.access_grant).setOnClickListener(x -> openAccessSettings());
         View pin = findViewById(R.id.pin_widget);
@@ -102,28 +142,43 @@ public class StudioActivity extends AppCompatActivity {
         pin.setOnClickListener(x -> manager.requestPinAppWidget(
                 new ComponentName(this, RadiationWidgetProvider.class), null, null));
 
-        styleGroup.addOnButtonCheckedListener((g, id, checked) -> {
-            if (!checked) return;
-            edit(() -> config.style = id == R.id.style_material_you ? WidgetConfig.Style.MATERIAL_YOU
-                    : id == R.id.style_amoled ? WidgetConfig.Style.AMOLED : WidgetConfig.Style.ALBUM);
+        backgrounds.setOnCheckedStateChangeListener((g, checked) -> {
+            if (checked.isEmpty()) return;
+            Background picked = Background.values()[indexOf(BACKGROUNDS, checked.get(0))];
+            edit(() -> {
+                int glassAlpha = WidgetConfig.alphaFromPercent(GLASS_DEFAULT_PERCENT);
+                if (picked == Background.GLASS && config.background != Background.GLASS
+                        && config.backgroundAlpha == 255) {
+                    config.backgroundAlpha = glassAlpha;
+                    glassLoweredOpacity = true;
+                } else if (picked != Background.GLASS && glassLoweredOpacity
+                        && config.backgroundAlpha == glassAlpha) {
+                    // Undo only what Glass itself changed; a user-chosen opacity stays.
+                    config.backgroundAlpha = 255;
+                }
+                if (picked != Background.GLASS) glassLoweredOpacity = false;
+                config.background = picked;
+            });
         });
-        tapGroup.addOnButtonCheckedListener((g, id, checked) -> {
-            if (!checked) return;
-            edit(() -> config.tapAction = id == R.id.tap_spotify ? WidgetConfig.TapAction.SPOTIFY
-                    : id == R.id.tap_nothing ? WidgetConfig.TapAction.NOTHING
-                    : WidgetConfig.TapAction.ACTIVE_APP);
-        });
+        onChoice(accents, ACCENTS, i -> edit(() -> config.accent = Accent.values()[i]));
+        onChoice(visualizers, VISUALIZERS, i -> edit(() -> config.visualizer = Visualizer.values()[i]));
+        onChoice(artShapes, ART_SHAPES, i -> edit(() -> config.artShape = ArtShape.values()[i]));
+        onChoice(tapActions, TAP_ACTIONS, i -> edit(() -> config.tapAction = TapAction.values()[i]));
         opacity.addOnChangeListener((s, value, fromUser) -> {
-            opacityValue.setText(getString(R.string.opacity_percent, Math.round(value)));
+            if (fromUser) glassLoweredOpacity = false; // the user owns opacity now
             edit(() -> config.backgroundAlpha = WidgetConfig.alphaFromPercent(Math.round(value)));
         });
+        outline.setOnCheckedChangeListener((b, on) -> edit(() -> config.outline = on));
         showArt.setOnCheckedChangeListener((b, on) -> edit(() -> config.showArt = on));
+        showArtist.setOnCheckedChangeListener((b, on) -> edit(() -> config.showArtist = on));
         showPrevious.setOnCheckedChangeListener((b, on) -> edit(() -> config.showPrevious = on));
         showNext.setOnCheckedChangeListener((b, on) -> edit(() -> config.showNext = on));
+        showShuffle.setOnCheckedChangeListener((b, on) -> edit(() -> config.showShuffle = on));
         picker.setOnCheckedStateChangeListener((g, checked) -> {
             if (binding || checked.isEmpty()) return;
             select((int) g.findViewById(checked.get(0)).getTag());
         });
+        buildSwatches();
 
         load();
     }
@@ -189,19 +244,21 @@ public class StudioActivity extends AppCompatActivity {
     /** The only place config is read from storage. */
     private void load() {
         config = WidgetConfig.load(this, widgetId);
+        glassLoweredOpacity = false;
         binding = true;
-        styleGroup.check(config.style == WidgetConfig.Style.MATERIAL_YOU ? R.id.style_material_you
-                : config.style == WidgetConfig.Style.AMOLED ? R.id.style_amoled : R.id.style_album);
-        tapGroup.check(config.tapAction == WidgetConfig.TapAction.SPOTIFY ? R.id.tap_spotify
-                : config.tapAction == WidgetConfig.TapAction.NOTHING ? R.id.tap_nothing : R.id.tap_active);
-        int percent = WidgetConfig.percentFromAlpha(config.backgroundAlpha);
-        opacity.setValue(percent);
-        opacityValue.setText(getString(R.string.opacity_percent, percent));
+        backgrounds.check(BACKGROUNDS[config.background.ordinal()]);
+        accents.check(ACCENTS[config.accent.ordinal()]);
+        visualizers.check(VISUALIZERS[config.visualizer.ordinal()]);
+        artShapes.check(ART_SHAPES[config.artShape.ordinal()]);
+        tapActions.check(TAP_ACTIONS[config.tapAction.ordinal()]);
+        outline.setChecked(config.outline);
         showArt.setChecked(config.showArt);
+        showArtist.setChecked(config.showArtist);
         showPrevious.setChecked(config.showPrevious);
         showNext.setChecked(config.showNext);
+        showShuffle.setChecked(config.showShuffle);
         binding = false;
-        updateStyleHint();
+        refreshDependentControls();
         renderPreview();
     }
 
@@ -209,14 +266,67 @@ public class StudioActivity extends AppCompatActivity {
         if (binding || widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return;
         change.run();
         config.save(this, widgetId);
-        updateStyleHint();
+        refreshDependentControls();
         renderPreview();
         WidgetUpdater.request(this); // throttled; slider drags collapse into a few renders
     }
 
-    private void updateStyleHint() {
-        styleHint.setText(config.style == WidgetConfig.Style.MATERIAL_YOU ? R.string.hint_material_you
-                : config.style == WidgetConfig.Style.AMOLED ? R.string.hint_amoled : R.string.hint_album);
+    /** Controls whose content or availability follows other settings. */
+    private void refreshDependentControls() {
+        backgroundHint.setText(BACKGROUND_HINTS[config.background.ordinal()]);
+        findViewById(R.id.swatch_scroll).setVisibility(
+                config.background == Background.CUSTOM ? View.VISIBLE : View.GONE);
+        for (int i = 0; i < swatches.getChildCount(); i++) {
+            styleSwatch(swatches.getChildAt(i), SWATCHES[i], SWATCHES[i] == config.customColor);
+        }
+        int percent = WidgetConfig.percentFromAlpha(config.backgroundAlpha);
+        if (Math.round(opacity.getValue()) != percent) {
+            binding = true;
+            opacity.setValue(percent);
+            binding = false;
+        }
+        opacityValue.setText(getString(R.string.opacity_percent, percent));
+        // Glass always has its hairline edge, so the separate outline switch would do nothing.
+        outline.setEnabled(config.background != Background.GLASS);
+        for (int i = 0; i < artShapes.getChildCount(); i++) artShapes.getChildAt(i).setEnabled(config.showArt);
+    }
+
+    private void buildSwatches() {
+        int size = Math.round(40 * getResources().getDisplayMetrics().density);
+        int gap = Math.round(10 * getResources().getDisplayMetrics().density);
+        for (int i = 0; i < SWATCHES.length; i++) {
+            int color = SWATCHES[i];
+            View swatch = new View(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
+            lp.setMarginEnd(gap);
+            swatch.setLayoutParams(lp);
+            swatch.setContentDescription(SWATCH_NAMES[i]);
+            swatch.setOnClickListener(x -> edit(() -> config.customColor = color));
+            swatches.addView(swatch);
+        }
+    }
+
+    private void styleSwatch(View swatch, int color, boolean selected) {
+        GradientDrawable d = new GradientDrawable();
+        d.setShape(GradientDrawable.OVAL);
+        d.setColor(color);
+        float density = getResources().getDisplayMetrics().density;
+        d.setStroke(Math.round((selected ? 3 : 1) * density), selected
+                ? MaterialColors.getColor(swatch, androidx.appcompat.R.attr.colorPrimary)
+                : MaterialColors.getColor(swatch, com.google.android.material.R.attr.colorOutlineVariant));
+        swatch.setBackground(d);
+        swatch.setSelected(selected);
+    }
+
+    private void onChoice(MaterialButtonToggleGroup group, int[] ids, IntConsumer onPick) {
+        group.addOnButtonCheckedListener((g, id, checked) -> {
+            if (checked) onPick.accept(indexOf(ids, id));
+        });
+    }
+
+    private static int indexOf(int[] ids, int id) {
+        for (int i = 0; i < ids.length; i++) if (ids[i] == id) return i;
+        return 0;
     }
 
     /**

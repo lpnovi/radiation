@@ -10,11 +10,9 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Process;
 import android.os.SystemClock;
-import android.widget.RemoteViews;
 
 import androidx.annotation.Nullable;
 
-import com.lpnovi.radiation.R;
 import com.lpnovi.radiation.config.WidgetConfig;
 import com.lpnovi.radiation.media.MediaSessions;
 import com.lpnovi.radiation.media.NowPlaying;
@@ -96,12 +94,7 @@ public final class WidgetUpdater {
             latest = result.nowPlaying;
             if (result.recheckInMs > 0) schedule(context, result.recheckInMs, null);
 
-            AppWidgetManager manager = AppWidgetManager.getInstance(context);
-            boolean access = MediaSessions.hasAccess(context);
-            for (int id : widgetIds(context)) {
-                manager.updateAppWidget(id, WidgetRenderer.build(context, id, WidgetConfig.load(context, id),
-                        result.nowPlaying, access, WidgetRenderer.heightDp(context, manager, id)));
-            }
+            renderAll(context, result.nowPlaying);
             Runnable l = listener;
             if (l != null) main.post(l);
         } catch (RuntimeException e) {
@@ -112,14 +105,24 @@ public final class WidgetUpdater {
         }
     }
 
+    private static void renderAll(Context context, NowPlaying np) {
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        boolean access = MediaSessions.hasAccess(context);
+        for (int id : widgetIds(context)) {
+            manager.updateAppWidget(id, WidgetRenderer.build(context, id, WidgetConfig.load(context, id),
+                    np, access, WidgetRenderer.heightDp(context, manager, id)));
+        }
+    }
+
     /**
-     * Immediate feedback for play/pause: flip the glyph now instead of waiting for the player's
-     * state round-trip. The player's real state arrives moments later and wins.
+     * Immediate feedback for a tap: render the expected state now (pause glyph, visualizer, shuffle)
+     * instead of waiting for the player's round-trip. The player's real state arrives moments
+     * later and wins. Skipped when there's no known session to base it on.
      */
-    static void showOptimisticPlayState(Context context, boolean playing) {
-        RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_radiation);
-        WidgetRenderer.setPlaying(context, v, playing);
-        AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(widgetIds(context), v);
+    static void showOptimistic(Context context, NowPlaying expected) {
+        if (expected.packageName == null) return;
+        latest = expected;
+        renderAll(context, expected);
     }
 
     public static int[] widgetIds(Context context) {

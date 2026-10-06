@@ -5,4 +5,7 @@
     <dimen name="art_radius">14dp</dimen>
     <dimen name="play_size">56dp</dimen>
     <dimen name="side_touch">48dp</dimen>
+    <!-- Bottom visualizer strip: inset from the rounded corners, fades out at both ends. -->
+    <dimen name="viz_height">10dp</dimen>
+    <dimen name="viz_inset">22dp</dimen>
 </resources>

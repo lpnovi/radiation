@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.res.Configuration;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
+import android.media.session.MediaSession;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
 import android.os.Build;
@@ -31,6 +32,7 @@ public class MediaListenerService extends NotificationListenerService {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private MediaSessionManager sessionManager;
     private final List<MediaController> watched = new ArrayList<>();
+    private final List<Shuffle.Watch> shuffleWatches = new ArrayList<>();
 
     private final MediaController.Callback callback = new MediaController.Callback() {
         @Override
@@ -101,13 +103,19 @@ public class MediaListenerService extends NotificationListenerService {
     /** Re-registers on the current session list; controllers from the old list are released. */
     private void watch(@Nullable List<MediaController> controllers) {
         for (MediaController c : watched) c.unregisterCallback(callback);
+        for (Shuffle.Watch w : shuffleWatches) w.release();
         watched.clear();
+        shuffleWatches.clear();
+        List<MediaSession.Token> live = new ArrayList<>();
         if (controllers != null) {
             for (MediaController c : controllers) {
                 c.registerCallback(callback, handler);
                 watched.add(c);
+                shuffleWatches.add(new Shuffle.Watch(this, c, handler, this::render));
+                live.add(c.getSessionToken());
             }
         }
+        Shuffle.retainOnly(live);
         render();
     }
 

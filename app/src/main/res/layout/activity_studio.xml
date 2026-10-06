@@ -152,7 +152,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Look -->
+                <!-- Background -->
                 <com.google.android.material.card.MaterialCardView
                     style="@style/Studio.Card"
                     android:layout_width="match_parent"
@@ -166,38 +166,65 @@
 
                         <TextView
                             style="@style/Studio.Section"
-                            android:text="@string/section_style" />
+                            android:text="@string/section_background" />
 
-                        <com.google.android.material.button.MaterialButtonToggleGroup
-                            android:id="@+id/style_group"
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/bg_group"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            app:chipSpacingVertical="0dp"
                             app:selectionRequired="true"
                             app:singleSelection="true">
 
-                            <Button
-                                android:id="@+id/style_album"
-                                style="@style/Studio.Segment"
-                                android:text="@string/style_album" />
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/bg_album_tint"
+                                style="@style/Studio.Choice"
+                                android:text="@string/bg_album_tint" />
 
-                            <Button
-                                android:id="@+id/style_amoled"
-                                style="@style/Studio.Segment"
-                                android:text="@string/style_amoled" />
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/bg_album_gradient"
+                                style="@style/Studio.Choice"
+                                android:text="@string/bg_album_gradient" />
 
-                            <Button
-                                android:id="@+id/style_material_you"
-                                style="@style/Studio.Segment"
-                                android:text="@string/style_material_you" />
-                        </com.google.android.material.button.MaterialButtonToggleGroup>
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/bg_amoled"
+                                style="@style/Studio.Choice"
+                                android:text="@string/bg_amoled" />
+
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/bg_material_you"
+                                style="@style/Studio.Choice"
+                                android:text="@string/bg_material_you" />
+
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/bg_glass"
+                                style="@style/Studio.Choice"
+                                android:text="@string/bg_glass" />
+
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/bg_custom"
+                                style="@style/Studio.Choice"
+                                android:text="@string/bg_custom" />
+                        </com.google.android.material.chip.ChipGroup>
 
                         <TextView
-                            android:id="@+id/style_hint"
+                            android:id="@+id/bg_hint"
+                            style="@style/Studio.Hint" />
+
+                        <!-- Filled in code; shown only for the Custom background. -->
+                        <HorizontalScrollView
+                            android:id="@+id/swatch_scroll"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:textAppearance="?attr/textAppearanceBodySmall"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
+                            android:layout_marginTop="12dp"
+                            android:scrollbars="none">
+
+                            <LinearLayout
+                                android:id="@+id/swatches"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal" />
+                        </HorizontalScrollView>
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -229,10 +256,122 @@
                             android:valueTo="100"
                             app:labelBehavior="gone"
                             app:tickVisible="false" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/outline"
+                            style="@style/Studio.Switch"
+                            android:text="@string/outline" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Elements -->
+                <!-- Controls -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Studio.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            style="@style/Studio.Section"
+                            android:text="@string/section_controls" />
+
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/accent_group"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:selectionRequired="true"
+                            app:singleSelection="true">
+
+                            <Button
+                                android:id="@+id/accent_album"
+                                style="@style/Studio.Segment"
+                                android:text="@string/accent_album" />
+
+                            <Button
+                                android:id="@+id/accent_material_you"
+                                style="@style/Studio.Segment"
+                                android:text="@string/accent_material_you" />
+
+                            <Button
+                                android:id="@+id/accent_mono"
+                                style="@style/Studio.Segment"
+                                android:text="@string/accent_mono" />
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/show_previous"
+                            style="@style/Studio.Switch"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/show_previous" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/show_next"
+                            style="@style/Studio.Switch"
+                            android:text="@string/show_next" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/show_shuffle"
+                            style="@style/Studio.Switch"
+                            android:text="@string/show_shuffle" />
+
+                        <TextView
+                            style="@style/Studio.Hint"
+                            android:layout_marginTop="0dp"
+                            android:text="@string/hint_shuffle" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Visualizer -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Studio.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            style="@style/Studio.Section"
+                            android:text="@string/section_visualizer" />
+
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/viz_group"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:selectionRequired="true"
+                            app:singleSelection="true">
+
+                            <Button
+                                android:id="@+id/viz_off"
+                                style="@style/Studio.Segment"
+                                android:text="@string/viz_off" />
+
+                            <Button
+                                android:id="@+id/viz_wave"
+                                style="@style/Studio.Segment"
+                                android:text="@string/viz_wave" />
+
+                            <Button
+                                android:id="@+id/viz_bars"
+                                style="@style/Studio.Segment"
+                                android:text="@string/viz_bars" />
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                        <TextView
+                            style="@style/Studio.Hint"
+                            android:text="@string/hint_visualizer" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Layout -->
                 <com.google.android.material.card.MaterialCardView
                     style="@style/Studio.Card"
                     android:layout_width="match_parent"
@@ -255,15 +394,29 @@
                             style="@style/Studio.Switch"
                             android:text="@string/show_art" />
 
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/show_previous"
-                            style="@style/Studio.Switch"
-                            android:text="@string/show_previous" />
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/art_shape_group"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            app:selectionRequired="true"
+                            app:singleSelection="true">
+
+                            <Button
+                                android:id="@+id/art_rounded"
+                                style="@style/Studio.Segment"
+                                android:text="@string/art_rounded" />
+
+                            <Button
+                                android:id="@+id/art_circle"
+                                style="@style/Studio.Segment"
+                                android:text="@string/art_circle" />
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
 
                         <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/show_next"
+                            android:id="@+id/show_artist"
                             style="@style/Studio.Switch"
-                            android:text="@string/show_next" />
+                            android:text="@string/show_artist" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

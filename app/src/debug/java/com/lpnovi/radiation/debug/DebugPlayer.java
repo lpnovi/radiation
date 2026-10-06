@@ -8,20 +8,20 @@ import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Shader;
-import android.media.MediaMetadata;
-import android.media.session.MediaSession;
-import android.media.session.PlaybackState;
 import android.os.Handler;
 import android.os.Looper;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 
 /**
  * Debug-only fake media player, driven over adb:
  *
  *   adb shell am broadcast -n com.lpnovi.radiation/.debug.DebugPlayer --es cmd start|next|prev|toggle|kill
  *
- * Mimics Spotify's habit of publishing a new track's text first and its artwork ~400ms later,
- * and cycles through deliberately awkward artwork: colorful, near-black, near-white, monochrome,
- * and none at all.
+ * A MediaSessionCompat, like Spotify's, so shuffle works end to end. Mimics Spotify's habit of
+ * publishing a new track's text first and its artwork ~400ms later, and cycles through
+ * deliberately awkward artwork: colorful, near-black, near-white, monochrome, and none at all.
  */
 public class DebugPlayer extends BroadcastReceiver {
 
@@ -33,7 +33,7 @@ public class DebugPlayer extends BroadcastReceiver {
     private static final long LATE_ART_MS = 400;
 
     private static final Handler main = new Handler(Looper.getMainLooper());
-    private static MediaSession session;
+    private static MediaSessionCompat session;
     private static int index;
     private static boolean playing;
 
@@ -59,13 +59,15 @@ public class DebugPlayer extends BroadcastReceiver {
 
     private static void ensure(Context app) {
         if (session != null) return;
-        session = new MediaSession(app, "RadiationDebugPlayer");
-        session.setCallback(new MediaSession.Callback() {
+        session = new MediaSessionCompat(app, "RadiationDebugPlayer");
+        session.setCallback(new MediaSessionCompat.Callback() {
             @Override public void onPlay() { playing = true; state(); }
             @Override public void onPause() { playing = false; state(); }
             @Override public void onSkipToNext() { show(index + 1); }
             @Override public void onSkipToPrevious() { show(index - 1); }
+            @Override public void onSetShuffleMode(int mode) { session.setShuffleMode(mode); }
         }, main);
+        session.setShuffleMode(PlaybackStateCompat.SHUFFLE_MODE_NONE);
         session.setActive(true);
         playing = true;
     }
@@ -73,16 +75,17 @@ public class DebugPlayer extends BroadcastReceiver {
     private static void show(int i) {
         index = Math.floorMod(i, TITLES.length);
         final int shown = index;
-        MediaMetadata.Builder text = new MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_TITLE, TITLES[shown])
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, "Radiation Debug Player")
-                .putString(MediaMetadata.METADATA_KEY_ALBUM, "Track " + (shown + 1));
+        MediaMetadataCompat.Builder text = new MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, TITLES[shown])
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Radiation Debug Player")
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Track " + (shown + 1));
         session.setMetadata(text.build());
         state();
         if (ART[shown] != null) {
             main.postDelayed(() -> {
                 if (session != null && index == shown) {
-                    session.setMetadata(text.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art(ART[shown])).build());
+                    session.setMetadata(text.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
+                            art(ART[shown])).build());
                 }
             }, LATE_ART_MS);
         }
@@ -90,10 +93,11 @@ public class DebugPlayer extends BroadcastReceiver {
 
     private static void state() {
         if (session == null) return;
-        session.setPlaybackState(new PlaybackState.Builder()
-                .setState(playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, 0, 1f)
-                .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE
-                        | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS)
+        session.setPlaybackState(new PlaybackStateCompat.Builder()
+                .setState(playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED, 0, 1f)
+                .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
+                        | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SET_SHUFFLE_MODE
+                        | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
                 .build());
     }
 

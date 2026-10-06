@@ -7,6 +7,10 @@
     <string name="previous">Previous</string>
     <string name="play_pause">Play or pause</string>
     <string name="next">Next</string>
+    <string name="shuffle">Shuffle</string>
+    <string name="shuffle_on">Shuffle, on</string>
+    <string name="shuffle_off">Shuffle, off</string>
+    <string name="shuffle_unsupported">Shuffle isn\'t available for this player</string>
     <string name="album_art">Album art</string>
 
     <string name="studio_subtitle">Widget Studio</string>
@@ -16,23 +20,54 @@
     <string name="access_grant">Grant access</string>
     <string name="no_widgets">No Radiation widget on your home screen yet. Add one, then style it here; the preview above is exactly what it will look like.</string>
     <string name="widget_n">Widget %d</string>
-    <string name="section_style">Style</string>
-    <string name="style_album">Album</string>
-    <string name="style_amoled">AMOLED</string>
-    <string name="style_material_you">Material You</string>
-    <string name="background_opacity">Background opacity</string>
-    <string name="section_layout">Show</string>
+    <string name="done">Add widget</string>
+    <string name="pin_widget">Add to home screen</string>
+    <string name="opacity_percent">%d%%</string>
+
+    <!-- Background -->
+    <string name="section_background">Background</string>
+    <string name="bg_album_tint">Album tint</string>
+    <string name="bg_album_gradient">Album glow</string>
+    <string name="bg_amoled">AMOLED</string>
+    <string name="bg_material_you">Material You</string>
+    <string name="bg_glass">Glass</string>
+    <string name="bg_custom">Custom</string>
+    <string name="hint_bg_album_tint">Near-black with a hint of the artwork\'s color.</string>
+    <string name="hint_bg_album_gradient">The artwork\'s color glows in from the art side.</string>
+    <string name="hint_bg_amoled">Pure black. Disappears into AMOLED wallpapers.</string>
+    <string name="hint_bg_material_you">Your wallpaper\'s system colors.</string>
+    <string name="hint_bg_glass">A light haze over your wallpaper with a hairline edge. Works best translucent.</string>
+    <string name="hint_bg_custom">A solid color of your choice. Text adapts automatically.</string>
+    <string name="background_opacity">Opacity</string>
+    <string name="outline">Outline</string>
+
+    <!-- Controls -->
+    <string name="section_controls">Controls</string>
+    <string name="accent_album">Album</string>
+    <string name="accent_material_you">Material You</string>
+    <string name="accent_mono">Mono</string>
+    <string name="show_previous">Previous</string>
+    <string name="show_next">Next</string>
+    <string name="show_shuffle">Shuffle</string>
+    <string name="hint_shuffle">Works with players that support it, including Spotify. Takes a little room from the title.</string>
+
+    <!-- Visualizer -->
+    <string name="section_visualizer">Visualizer</string>
+    <string name="viz_off">Off</string>
+    <string name="viz_wave">Wave</string>
+    <string name="viz_bars">Bars</string>
+    <string name="hint_visualizer">Moves along the bottom edge only while music plays. Drawn by your launcher, so it costs Radiation nothing while running.</string>
+
+    <!-- Layout -->
+    <string name="section_layout">Layout</string>
     <string name="show_art">Album art</string>
-    <string name="show_previous">Previous button</string>
-    <string name="show_next">Next button</string>
+    <string name="art_rounded">Rounded</string>
+    <string name="art_circle">Circle</string>
+    <string name="show_artist">Artist</string>
+
+    <!-- Interaction -->
     <string name="section_tap">Tapping art or title opens</string>
     <string name="tap_active">Current player</string>
     <string name="tap_spotify">Spotify</string>
     <string name="tap_nothing">Nothing</string>
-    <string name="done">Add widget</string>
-    <string name="pin_widget">Add to home screen</string>
-    <string name="opacity_percent">%d%%</string>
-    <string name="hint_album">Controls and a subtle tint follow the current artwork.</string>
-    <string name="hint_amoled">Pure black with white controls.</string>
-    <string name="hint_material_you">Follows your wallpaper\'s system colors.</string>
 </resources>

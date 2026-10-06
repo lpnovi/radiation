@@ -3,6 +3,8 @@
   RemoteViews layout: framework views only. Hosts may *reapply* updates onto the existing view tree,
   so WidgetRenderer sets every dynamic property on every render; nothing relies on XML defaults
   after the first update.
+
+  Layers, back to front: surface -> glow (album gradient) -> outline -> visualizer strip -> content.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -11,7 +13,7 @@
     android:layout_height="match_parent"
     tools:ignore="UseAppTint">
 
-    <!-- The only layer that background opacity touches. -->
+    <!-- Background layers: the only views that background opacity touches. -->
     <ImageView
         android:id="@+id/surface"
         android:layout_width="match_parent"
@@ -20,6 +22,51 @@
         android:scaleType="fitXY"
         android:src="@drawable/widget_bg"
         android:tint="#FF000000" />
+
+    <ImageView
+        android:id="@+id/surface_glow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/surface_glow"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/surface_outline"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/surface_outline"
+        android:visibility="gone" />
+
+    <!--
+      Bottom visualizer. One animated ProgressBar per style (RemoteViews can't swap an indeterminate
+      drawable), plus a static frame for reduced motion / Android < 12. Inset from the corners and
+      faded at both ends so it reads as part of the surface, not a separate bar.
+    -->
+    <ProgressBar
+        android:id="@+id/viz_wave"
+        style="@style/Widget.Visualizer"
+        android:indeterminateDrawable="@drawable/viz_wave" />
+
+    <ProgressBar
+        android:id="@+id/viz_bars"
+        style="@style/Widget.Visualizer"
+        android:indeterminateDrawable="@drawable/viz_bars" />
+
+    <ImageView
+        android:id="@+id/viz_static"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/viz_height"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="@dimen/viz_inset"
+        android:layout_marginBottom="2dp"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/viz_wave_0"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/row"
@@ -86,51 +133,30 @@
                 android:textColor="#FFFFFFFF"
                 android:textSize="16sp" />
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/artist"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <!-- Now playing (animated): indeterminate ProgressBar running eq_anim. Android 12+. -->
-                <ProgressBar
-                    android:id="@+id/eq"
-                    android:layout_width="12dp"
-                    android:layout_height="12dp"
-                    android:layout_marginEnd="6dp"
-                    android:indeterminate="true"
-                    android:indeterminateDrawable="@drawable/eq_anim"
-                    android:indeterminateOnly="true"
-                    android:maxWidth="12dp"
-                    android:maxHeight="12dp"
-                    android:minWidth="12dp"
-                    android:minHeight="12dp"
-                    android:visibility="gone" />
-
-                <!-- Now playing (static): used when animations are off or tinting isn't available. -->
-                <ImageView
-                    android:id="@+id/eq_static"
-                    android:layout_width="12dp"
-                    android:layout_height="12dp"
-                    android:layout_marginEnd="6dp"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/eq_f4"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/artist"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:includeFontPadding="false"
-                    android:maxLines="1"
-                    android:text="@string/app_name"
-                    android:textColor="#B8FFFFFF"
-                    android:textSize="14sp" />
-            </LinearLayout>
+                android:ellipsize="end"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="@string/app_name"
+                android:textColor="#B8FFFFFF"
+                android:textSize="14sp" />
         </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/shuffle"
+            android:layout_width="@dimen/side_touch"
+            android:layout_height="@dimen/side_touch"
+            android:background="@drawable/ripple_on_dark"
+            android:contentDescription="@string/shuffle"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_shuffle_off_state"
+            android:tint="#FFFFFFFF"
+            android:visibility="gone" />
 
         <ImageButton
             android:id="@+id/previous"

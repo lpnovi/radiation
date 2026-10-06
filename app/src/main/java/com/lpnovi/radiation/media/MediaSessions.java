@@ -82,12 +82,14 @@ public final class MediaSessions {
         return s == null ? PlaybackState.STATE_NONE : s.getState();
     }
 
-    public enum Action { PREVIOUS, PLAY_PAUSE, NEXT }
+    public enum Action { PREVIOUS, PLAY_PAUSE, NEXT, SHUFFLE }
 
     public static void perform(Context context, Action action) {
         MediaController controller = active(context);
         if (controller == null) {
             // No session access: a media key still reaches the last active player without any permission.
+            // There is no media key for shuffle, so that one needs access.
+            if (action == Action.SHUFFLE) return;
             dispatchKey(context, keyCodeFor(action));
             return;
         }
@@ -95,6 +97,7 @@ public final class MediaSessions {
         switch (action) {
             case PREVIOUS: t.skipToPrevious(); break;
             case NEXT: t.skipToNext(); break;
+            case SHUFFLE: Shuffle.toggle(context, controller); break;
             case PLAY_PAUSE:
                 if (isPlaying(controller)) t.pause(); else t.play();
                 break;

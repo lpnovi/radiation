@@ -11,7 +11,7 @@ import com.lpnovi.radiation.color.ColorEngine;
 public final class NowPlaying {
 
     public static final NowPlaying NOTHING = new NowPlaying(null, null, null, null, null,
-            ColorEngine.NONE, false, null);
+            ColorEngine.NONE, false, Shuffle.UNSUPPORTED, null);
 
     /** Package of the session shown, or null when nothing is available. */
     @Nullable public final String packageName;
@@ -24,10 +24,12 @@ public final class NowPlaying {
     /** Album-art seed color for the color engine, or {@link ColorEngine#NONE}. */
     public final int seed;
     public final boolean playing;
+    /** {@link Shuffle#ON}, {@link Shuffle#OFF} or {@link Shuffle#UNSUPPORTED}. */
+    public final int shuffle;
     @Nullable public final PendingIntent sessionActivity;
 
     NowPlaying(@Nullable String packageName, @Nullable CharSequence title, @Nullable CharSequence artist,
-               @Nullable Bitmap art, @Nullable String artKey, int seed, boolean playing,
+               @Nullable Bitmap art, @Nullable String artKey, int seed, boolean playing, int shuffle,
                @Nullable PendingIntent sessionActivity) {
         this.packageName = packageName;
         this.title = title;
@@ -36,15 +38,28 @@ public final class NowPlaying {
         this.artKey = artKey;
         this.seed = seed;
         this.playing = playing;
+        this.shuffle = shuffle;
         this.sessionActivity = sessionActivity;
     }
 
     NowPlaying withArtOf(NowPlaying other) {
-        return new NowPlaying(packageName, title, artist, other.art, other.artKey, other.seed, playing, sessionActivity);
+        return new NowPlaying(packageName, title, artist, other.art, other.artKey, other.seed, playing, shuffle,
+                sessionActivity);
+    }
+
+    /** For optimistic rendering of a tap. */
+    public NowPlaying withPlaying(boolean playing) {
+        return new NowPlaying(packageName, title, artist, art, artKey, seed, playing, shuffle, sessionActivity);
+    }
+
+    /** For optimistic rendering of a tap. */
+    public NowPlaying withShuffle(int shuffle) {
+        return new NowPlaying(packageName, title, artist, art, artKey, seed, playing, shuffle, sessionActivity);
     }
 
     /** Previous track's visuals with live playback state/intent: used while waiting for new artwork. */
     NowPlaying heldWithStateOf(NowPlaying live) {
-        return new NowPlaying(packageName, title, artist, art, artKey, seed, live.playing, live.sessionActivity);
+        return new NowPlaying(packageName, title, artist, art, artKey, seed, live.playing, live.shuffle,
+                live.sessionActivity);
     }
 }

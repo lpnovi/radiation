@@ -26,46 +26,63 @@ public final class ColorEngine {
     /** Everything the renderer needs to paint one widget. */
     public static final class Theme {
         public int surface;        // background layer color (opaque; alpha applied separately)
+        public int glow = NONE;    // gradient layer color fading in from the art side, or NONE
         public int effective;      // what the eye sees behind the foreground: surface blended over wallpaper
         public int text;
         public int textSecondary;  // opaque, pre-blended, still >= 4.5:1
-        public int accent;         // control glyphs + now-playing indicator
+        public int accent;         // control glyphs + visualizer
         public int placeholder;    // fallback art tile + icon tint
         public boolean darkForeground;  // effective background is light
     }
 
-    /**
-     * @param seed       album-art seed color or NONE
-     * @param wallpaper  wallpaper primary color or UNKNOWN_WALLPAPER
-     * @param myBg       Material You surface (only used for that style)
-     * @param myAccent   Material You accent (only used for that style)
-     */
-    public static Theme theme(WidgetConfig.Style style, int backgroundAlpha, int seed,
-                              int wallpaper, int myBg, int myAccent) {
+    /** Inputs that aren't part of the widget's config. */
+    public static final class Inputs {
+        public int seed = NONE;                     // album-art seed, or NONE
+        public int wallpaper = UNKNOWN_WALLPAPER;   // wallpaper primary color
+        public int myBg, myAccent;                  // Material You system colors
+    }
+
+    public static Theme theme(WidgetConfig c, Inputs in) {
         Theme t = new Theme();
-        switch (style) {
-            case MATERIAL_YOU: t.surface = opaque(myBg); break;
-            case ALBUM: t.surface = seed == NONE ? 0xFF000000 : albumSurface(seed); break;
-            default: t.surface = 0xFF000000; break;
+        int seed = in.seed;
+        switch (c.background) {
+            case AMOLED: t.surface = 0xFF000000; break;
+            case MATERIAL_YOU: t.surface = opaque(in.myBg); break;
+            case CUSTOM: t.surface = opaque(c.customColor); break;
+            // A light haze of the wallpaper's own color: reads as frosted glass once translucent.
+            case GLASS: t.surface = blend(WHITE, opaque(in.wallpaper), 0.35f); break;
+            case ALBUM_GRADIENT:
+                t.surface = seed == NONE ? 0xFF000000 : albumSurface(seed);
+                t.glow = seed == NONE ? NONE : albumGlow(seed);
+                break;
+            default: t.surface = seed == NONE ? 0xFF000000 : albumSurface(seed); break;
         }
-        t.effective = blend(t.surface, opaque(wallpaper), backgroundAlpha / 255f);
-        t.darkForeground = contrast(INK, t.effective) > contrast(WHITE, t.effective);
+        float alpha = c.backgroundAlpha / 255f;
+        t.effective = blend(t.surface, opaque(in.wallpaper), alpha);
+        // Text sits over both gradient ends; judge readability against the worse of the two.
+        int other = t.glow == NONE ? t.effective : blend(t.glow, opaque(in.wallpaper), alpha);
+        t.darkForeground = minContrast(INK, t.effective, other) > minContrast(WHITE, t.effective, other);
         t.text = t.darkForeground ? INK : WHITE;
         int secondary = blend(t.text, t.effective, 0.72f);
         // Mostly-transparent surface: the real pixels behind the text are local wallpaper detail we
         // can't see (only its overall color), so keep full strength rather than a dimmed tone.
-        boolean seeThrough = backgroundAlpha < SEE_THROUGH_ALPHA;
-        t.textSecondary = !seeThrough && contrast(secondary, t.effective) >= TEXT_CONTRAST ? secondary : t.text;
+        boolean seeThrough = c.backgroundAlpha < SEE_THROUGH_ALPHA;
+        t.textSecondary = !seeThrough && minContrast(secondary, t.effective, other) >= TEXT_CONTRAST
+                ? secondary : t.text;
 
         int accentSeed;
-        switch (style) {
-            case MATERIAL_YOU: accentSeed = opaque(myAccent); break;
+        switch (c.accent) {
+            case MATERIAL_YOU: accentSeed = opaque(in.myAccent); break;
             case ALBUM: accentSeed = seed == NONE ? t.text : tame(seed); break;
             default: accentSeed = t.text; break;
         }
-        t.accent = ensureContrast(accentSeed, t.effective, TEXT_CONTRAST);
+        t.accent = ensureContrast(accentSeed, t.effective, other, TEXT_CONTRAST, t.text);
         t.placeholder = blend(t.text, t.effective, 0.12f);
         return t;
+    }
+
+    private static double minContrast(int fg, int bgA, int bgB) {
+        return Math.min(contrast(fg, bgA), contrast(fg, bgB));
     }
 
     /**
@@ -112,17 +129,27 @@ public final class ColorEngine {
         return fromHsl(hsl[0], s, 0.085f);
     }
 
-    /** Moves lightness away from the background, keeping hue and saturation, until contrast is met. */
-    static int ensureContrast(int color, int background, double target) {
-        if (contrast(color, background) >= target) return color;
+    /** The gradient's glow: the artwork's color, deep enough that light text stays readable on it. */
+    static int albumGlow(int seed) {
+        float[] hsl = toHsl(seed);
+        float s = hsl[1] < MONO_SATURATION ? 0f : Math.min(hsl[1], 0.6f);
+        return fromHsl(hsl[0], s, 0.24f);
+    }
+
+    /**
+     * Moves lightness away from the backgrounds, keeping hue and saturation, until contrast is met
+     * against both. If that's impossible (backgrounds on opposite sides), uses {@code fallback}.
+     */
+    static int ensureContrast(int color, int bgA, int bgB, double target, int fallback) {
+        if (minContrast(color, bgA, bgB) >= target) return color;
         float[] hsl = toHsl(color);
-        boolean lighten = luminance(background) < 0.18;
+        boolean lighten = (luminance(bgA) + luminance(bgB)) / 2 < 0.18;
         for (int i = 0; i < 50; i++) {
             hsl[2] = Math.max(0f, Math.min(1f, hsl[2] + (lighten ? 0.02f : -0.02f)));
             int c = fromHsl(hsl[0], hsl[1], hsl[2]);
-            if (contrast(c, background) >= target) return c;
+            if (minContrast(c, bgA, bgB) >= target) return c;
         }
-        return lighten ? WHITE : INK;
+        return fallback;
     }
 
     // --- sRGB / WCAG helpers ---

@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="300dp" android:height="10dp"
+    android:viewportWidth="300" android:viewportHeight="10">
+    <path android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M0,3.71L4,3.14L8,2.83L12,2.81L16,3.03L20,3.45L24,3.98L28,4.55L32,5.10L36,5.58L40,5.95L44,6.21L48,6.33L52,6.33L56,6.21L60,5.95L64,5.58L68,5.10L72,4.55L76,3.98L80,3.45L84,3.03L88,2.81L92,2.83L96,3.14L100,3.71L104,4.49L108,5.41L112,6.33L116,7.14L120,7.72L124,7.99L128,7.90L132,7.47L136,6.76L140,5.88L144,4.94L148,4.08L152,3.39L156,2.95L160,2.79L164,2.89L168,3.22L172,3.70L176,4.26L180,4.83L184,5.35L188,5.78L192,6.09L196,6.29L200,6.35L204,6.29L208,6.09L212,5.78L216,5.35L220,4.83L224,4.26L228,3.70L232,3.22L236,2.89L240,2.79L244,2.95L248,3.39L252,4.08L256,4.94L260,5.88L264,6.76L268,7.47L272,7.90L276,7.99L280,7.72L284,7.14L288,6.33L292,5.41L296,4.49L300,3.71">
+        <!-- White with faded ends; tinting (SRC_IN / SRC_ATOP) keeps this alpha, so the strip melts into the edges. -->
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="300" android:endY="0">
+                <item android:offset="0" android:color="#00FFFFFF" />
+                <item android:offset="0.22" android:color="#FFFFFFFF" />
+                <item android:offset="0.78" android:color="#FFFFFFFF" />
+                <item android:offset="1" android:color="#00FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

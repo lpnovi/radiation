@@ -24,10 +24,39 @@
         <item name="android:paddingEnd">4dp</item>
     </style>
 
+    <style name="Studio.Choice" parent="Widget.Material3.Chip.Filter">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:checkable">true</item>
+    </style>
+
+    <style name="Studio.Hint" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodySmall</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
     <style name="Studio.Switch" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:minHeight">52dp</item>
         <item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
+    </style>
+    <!-- Widget bottom visualizer (used inside RemoteViews, so framework attributes only). -->
+    <style name="Widget.Visualizer" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/viz_height</item>
+        <item name="android:layout_gravity">bottom</item>
+        <item name="android:layout_marginStart">@dimen/viz_inset</item>
+        <item name="android:layout_marginEnd">@dimen/viz_inset</item>
+        <item name="android:layout_marginBottom">2dp</item>
+        <item name="android:indeterminate">true</item>
+        <item name="android:indeterminateOnly">true</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:maxHeight">@dimen/viz_height</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:visibility">gone</item>
     </style>
 </resources>

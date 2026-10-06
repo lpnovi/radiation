@@ -100,7 +100,7 @@ public final class NowPlayingTracker {
                 + (meta == null ? null : meta.getString(MediaMetadata.METADATA_KEY_ALBUM));
 
         NowPlaying live = new NowPlaying(pkg, title, artist, null, null, ColorEngine.NONE,
-                MediaSessions.isPlaying(controller), controller.getSessionActivity());
+                MediaSessions.isPlaying(controller), Shuffle.of(controller), controller.getSessionActivity());
         Bitmap source = meta == null ? null : readArtwork(context, meta);
         if (source != null) {
             String artKey = track + '\u0000' + fingerprint(source);
@@ -111,7 +111,8 @@ public final class NowPlayingTracker {
                 log("artwork processed " + source.getWidth() + "x" + source.getHeight() + " seed=#"
                         + Integer.toHexString(p.seed) + " for " + title);
             }
-            live = new NowPlaying(pkg, title, artist, p.art, artKey, p.seed, live.playing, live.sessionActivity);
+            live = new NowPlaying(pkg, title, artist, p.art, artKey, p.seed, live.playing, live.shuffle,
+                    live.sessionActivity);
         }
 
         long now = SystemClock.uptimeMillis();

@@ -8,9 +8,11 @@ A clean, highly customizable **4×1 media widget** for Android.
 
 - Works with Spotify and any other player that publishes an Android media session. No Spotify login needed.
 - Settings are per widget: place several Radiation widgets with different looks.
-- **Album** style (default): the play button and controls take their color from the current artwork, with contrast guaranteed.
-- AMOLED and Material You styles, background opacity that never fades text or controls, toggleable art and buttons.
-- Tap the widget to open the current player (or always Spotify, or nothing).
+- Controls take their color from the current artwork (or Material You, or mono), with contrast guaranteed.
+- Backgrounds: album tint (default), album glow, AMOLED, Material You, glass, or a custom color; opacity that never fades text or controls; optional outline.
+- A subtle animated wave or bars along the bottom while music plays, drawn by the launcher itself.
+- Optional shuffle button for players that support it (Spotify included).
+- Toggle art (rounded or circle), artist, previous, next, shuffle. Tap opens the current player (or always Spotify, or nothing).
 
 ## Privacy
 
