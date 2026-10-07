@@ -80,4 +80,33 @@
     <string name="tap_active">Current player</string>
     <string name="tap_spotify">Spotify</string>
     <string name="tap_nothing">Nothing</string>
+
+    <!-- Player binding -->
+    <string name="player_not_playing">Not playing</string>
+    <string name="player_not_installed">Not installed</string>
+    <string name="section_player">Player</string>
+    <string name="bind_to_player">Bind to player</string>
+    <string name="follow_active">Follow active player</string>
+    <string name="playing_now">Playing now</string>
+    <string name="hint_bind">Follow active shows whatever is playing. A widget bound to a player only ever shows and controls that player; other apps never take it over.</string>
+    <string name="picker_title">Bind to player</string>
+    <string name="picker_loading">Finding players…</string>
+
+    <!-- Typography -->
+    <string name="section_typography">Typography</string>
+    <string name="show_title">Title</string>
+    <string name="title_size">Title size</string>
+    <string name="artist_size">Artist size</string>
+    <string name="size_sp">%1$.1f sp</string>
+    <string name="weight_regular">Regular</string>
+    <string name="weight_medium">Medium</string>
+    <string name="weight_bold">Bold</string>
+    <string name="lines_one">1 line</string>
+    <string name="lines_two">2 lines</string>
+    <string name="fit_title">Shrink long titles to fit</string>
+    <string name="preview_long_title">Preview with a long title</string>
+    <string name="hint_typography">Uses your phone\'s system font. Long titles shrink slightly before being shortened, and text always fits the row.</string>
+    <string name="sample_title">Locked Away (feat. Adam Levine)</string>
+    <string name="sample_artist">R. City, Adam Levine</string>
+    <string name="player_unavailable">%1$s (not installed)</string>
 </resources>

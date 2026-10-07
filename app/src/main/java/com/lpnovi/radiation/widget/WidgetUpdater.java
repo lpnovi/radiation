@@ -19,7 +19,10 @@ import com.lpnovi.radiation.media.NowPlaying;
 import com.lpnovi.radiation.media.NowPlayingTracker;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The single path by which widgets get updated. Event-driven: callers request a render; requests
@@ -31,14 +34,15 @@ public final class WidgetUpdater {
     private static final long THROTTLE_MS = 40;
 
     private static final Handler main = new Handler(Looper.getMainLooper());
-    private static final NowPlayingTracker tracker = new NowPlayingTracker();
+    /** One tracker per binding in use ("" = follow active). Render thread only. */
+    private static final Map<String, NowPlayingTracker> trackers = new HashMap<>();
     private static final List<BroadcastReceiver.PendingResult> waiting = new ArrayList<>();
     private static Handler worker;
     @SuppressLint("StaticFieldLeak") // always the application context
     private static Context app;
     private static long scheduledAt = Long.MAX_VALUE;
 
-    private static volatile NowPlaying latest = NowPlaying.NOTHING;
+    private static final Map<String, NowPlaying> latest = new ConcurrentHashMap<>();
     private static volatile Runnable listener;
 
     private WidgetUpdater() {}
@@ -52,9 +56,14 @@ public final class WidgetUpdater {
         schedule(context, THROTTLE_MS, async);
     }
 
-    /** What widgets currently show; the studio preview renders from this. */
-    public static NowPlaying latest() {
-        return latest;
+    /** What widgets with this binding currently show; the studio preview renders from this. */
+    public static NowPlaying latest(@Nullable String boundPackage) {
+        NowPlaying np = latest.get(key(boundPackage));
+        return np == null ? NowPlaying.NOTHING : np;
+    }
+
+    private static String key(@Nullable String boundPackage) {
+        return boundPackage == null ? "" : boundPackage;
     }
 
     /** Main-thread callback after each render (the studio preview). Pass null to clear. */
@@ -90,11 +99,24 @@ public final class WidgetUpdater {
             waiting.clear();
         }
         try {
-            NowPlayingTracker.Result result = tracker.resolve(context);
-            latest = result.nowPlaying;
-            if (result.recheckInMs > 0) schedule(context, result.recheckInMs, null);
-
-            renderAll(context, result.nowPlaying);
+            // Resolve each binding in use once, then render every widget from its own binding.
+            int[] ids = widgetIds(context);
+            WidgetConfig[] configs = new WidgetConfig[ids.length];
+            Map<String, NowPlaying> resolved = new HashMap<>();
+            for (int i = 0; i < ids.length; i++) {
+                configs[i] = WidgetConfig.load(context, ids[i]);
+                String k = key(configs[i].boundPackage);
+                if (resolved.containsKey(k)) continue;
+                NowPlayingTracker tracker = trackers.get(k);
+                if (tracker == null) trackers.put(k, tracker = new NowPlayingTracker());
+                NowPlayingTracker.Result result = tracker.resolve(context, configs[i].boundPackage);
+                if (result.recheckInMs > 0) schedule(context, result.recheckInMs, null);
+                resolved.put(k, result.nowPlaying);
+            }
+            trackers.keySet().retainAll(resolved.keySet());
+            latest.keySet().retainAll(resolved.keySet());
+            latest.putAll(resolved);
+            renderAll(context, ids, configs, null, null);
             Runnable l = listener;
             if (l != null) main.post(l);
         } catch (RuntimeException e) {
@@ -105,13 +127,17 @@ public final class WidgetUpdater {
         }
     }
 
-    private static void renderAll(Context context, NowPlaying np) {
+    /** Renders widgets; with onlyKey set, only those with that binding, showing override. */
+    private static void renderAll(Context context, int[] ids, WidgetConfig[] configs,
+                                  @Nullable String onlyKey, @Nullable NowPlaying override) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         boolean access = MediaSessions.hasAccess(context);
-        for (int id : widgetIds(context)) {
-            manager.updateAppWidget(id, WidgetRenderer.build(context, id, WidgetConfig.load(context, id),
-                    np, access, WidgetRenderer.widthDp(context, manager, id),
-                    WidgetRenderer.heightDp(context, manager, id)));
+        for (int i = 0; i < ids.length; i++) {
+            String k = key(configs[i].boundPackage);
+            if (onlyKey != null && !onlyKey.equals(k)) continue;
+            NowPlaying np = override != null ? override : latest(configs[i].boundPackage);
+            manager.updateAppWidget(ids[i], WidgetRenderer.build(context, ids[i], configs[i], np, access,
+                    WidgetRenderer.widthDp(context, manager, ids[i]), WidgetRenderer.heightDp(context, manager, ids[i])));
         }
     }
 
@@ -120,10 +146,13 @@ public final class WidgetUpdater {
      * instead of waiting for the player's round-trip. The player's real state arrives moments
      * later and wins. Skipped when there's no known session to base it on.
      */
-    static void showOptimistic(Context context, NowPlaying expected) {
-        if (expected.packageName == null) return;
-        latest = expected;
-        renderAll(context, expected);
+    static void showOptimistic(Context context, @Nullable String boundPackage, NowPlaying expected) {
+        if (expected.packageName == null || !expected.hasSession) return;
+        latest.put(key(boundPackage), expected);
+        int[] ids = widgetIds(context);
+        WidgetConfig[] configs = new WidgetConfig[ids.length];
+        for (int i = 0; i < ids.length; i++) configs[i] = WidgetConfig.load(context, ids[i]);
+        renderAll(context, ids, configs, key(boundPackage), expected);
     }
 
     public static int[] widgetIds(Context context) {

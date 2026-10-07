@@ -26,9 +26,19 @@ public final class MediaSessions {
         return NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.getPackageName());
     }
 
-    /** The session to show, or null when nothing is available or access is not granted. */
+    /** The session to show for a follow-active widget, or null. */
     @Nullable
     public static MediaController active(Context context) {
+        return active(context, null);
+    }
+
+    /**
+     * The session a widget should reflect, or null when nothing is available or access is not
+     * granted. With a bound package, only that app's sessions are considered: another player
+     * starting playback never takes over a bound widget.
+     */
+    @Nullable
+    public static MediaController active(Context context, @Nullable String boundPackage) {
         List<MediaController> sessions;
         try {
             sessions = context.getSystemService(MediaSessionManager.class)
@@ -36,21 +46,29 @@ public final class MediaSessions {
         } catch (SecurityException e) {
             return null;
         }
+        String[] packages = new String[sessions.size()];
         int[] states = new int[sessions.size()];
-        for (int i = 0; i < states.length; i++) states[i] = stateOf(sessions.get(i));
-        int i = pick(states);
+        for (int i = 0; i < states.length; i++) {
+            packages[i] = sessions.get(i).getPackageName();
+            states[i] = stateOf(sessions.get(i));
+        }
+        int i = pick(packages, states, boundPackage);
         return i < 0 ? null : sessions.get(i);
     }
 
     /**
-     * Sessions arrive in the system's priority order (most recently active first). Prefer the first
-     * one that is actually playing, otherwise the top one, so a paused Spotify still shows.
+     * Sessions arrive in the system's priority order (most recently active first). Among the
+     * candidates (all sessions, or only the bound package's), prefer the first one that is actually
+     * playing, otherwise the top one, so a paused Spotify still shows. -1 when there is no candidate.
      */
-    static int pick(int[] states) {
+    static int pick(String[] packages, int[] states, @Nullable String boundPackage) {
+        int first = -1;
         for (int i = 0; i < states.length; i++) {
+            if (boundPackage != null && !boundPackage.equals(packages[i])) continue;
             if (isActiveState(states[i])) return i;
+            if (first < 0) first = i;
         }
-        return states.length > 0 ? 0 : -1;
+        return first;
     }
 
     public static boolean isPlaying(@Nullable MediaController controller) {
@@ -84,9 +102,16 @@ public final class MediaSessions {
 
     public enum Action { PREVIOUS, PLAY_PAUSE, NEXT, SHUFFLE }
 
-    public static void perform(Context context, Action action) {
-        MediaController controller = active(context);
+    /**
+     * Sends an action to the widget's player: the bound app's session, or the active one.
+     * Without a session, a follow-active widget falls back to a media key; a bound widget does not,
+     * because the system would deliver the key to whichever app it chooses. (For a bound player with
+     * no session, the renderer turns play into "open the player" instead.)
+     */
+    public static void perform(Context context, Action action, @Nullable String boundPackage) {
+        MediaController controller = active(context, boundPackage);
         if (controller == null) {
+            if (boundPackage != null) return;
             // No session access: a media key still reaches the last active player without any permission.
             // There is no media key for shuffle, so that one needs access.
             if (action == Action.SHUFFLE) return;

@@ -14,6 +14,7 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Shader;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -81,39 +82,81 @@ public final class WidgetRenderer {
         float liftDp = config.visualizer == WidgetConfig.Visualizer.OFF ? 0 : 5;
         float endPadDp = Math.max(4, s.pad - 6);
         // The corner shuffle sits in the column of the rightmost transport control.
-        float columnDp = endPadDp + (config.showNext ? s.sideTouch : s.play) / 2f;
+        float columnDp = endPadDp + (config.showNext ? s.sideWidth : s.playWidth) / 2f;
         Corner corner = Corner.place(heightDp, liftDp, config.showNext ? s.sideIcon : s.playIcon, columnDp);
 
         // Proportions from the real cell height (Android 12+; older launchers use the XML defaults).
+        // Controls are a touch narrower than tall: full-height targets, more width for the title.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             size(v, R.id.art_box, s.art, s.art);
-            size(v, R.id.play_pause, s.play, s.play);
-            size(v, R.id.previous, s.sideTouch, s.sideTouch);
-            size(v, R.id.next, s.sideTouch, s.sideTouch);
+            size(v, R.id.play_pause, s.playWidth, s.play);
+            size(v, R.id.previous, s.sideWidth, s.sideTouch);
+            size(v, R.id.next, s.sideWidth, s.sideTouch);
             size(v, R.id.shuffle, Corner.WIDTH, corner.height);
             v.setViewLayoutMargin(R.id.shuffle, RemoteViews.MARGIN_END, corner.marginEnd, TypedValue.COMPLEX_UNIT_DIP);
         }
         int pad = px(context, s.pad);
         v.setViewPadding(R.id.row, pad, 0, px(context, endPadDp), px(context, liftDp));
-        int sideInset = px(context, (s.sideTouch - s.sideIcon) / 2f);
-        v.setViewPadding(R.id.previous, sideInset, sideInset, sideInset, sideInset);
-        v.setViewPadding(R.id.next, sideInset, sideInset, sideInset, sideInset);
+        int sideX = px(context, (s.sideWidth - s.sideIcon) / 2f), sideY = px(context, (s.sideTouch - s.sideIcon) / 2f);
+        v.setViewPadding(R.id.previous, sideX, sideY, sideX, sideY);
+        v.setViewPadding(R.id.next, sideX, sideY, sideX, sideY);
         int cornerX = px(context, (Corner.WIDTH - corner.glyph) / 2f);
         v.setViewPadding(R.id.shuffle, cornerX, px(context, corner.glyphTop), cornerX,
                 px(context, Math.max(0, corner.height - corner.glyphTop - corner.glyph)));
-        int playInset = px(context, (s.play - s.playIcon) / 2f);
-        v.setViewPadding(R.id.play_pause, playInset, playInset, playInset, playInset);
+        int playX = px(context, (s.playWidth - s.playIcon) / 2f), playY = px(context, (s.play - s.playIcon) / 2f);
+        v.setViewPadding(R.id.play_pause, playX, playY, playX, playY);
+        v.setViewPadding(R.id.info, px(context, config.showArt ? INFO_START_DP : 0), 0, px(context, INFO_END_DP), 0);
 
-        // Text.
-        boolean nothing = TextUtils.isEmpty(np.title);
-        v.setTextViewText(R.id.title, nothing ? context.getText(R.string.nothing_playing) : np.title);
-        v.setTextViewText(R.id.artist, nothing
-                ? context.getText(hasAccess ? R.string.app_name : R.string.tap_to_connect)
-                : np.artist == null ? "" : np.artist);
-        // The artist line can be turned off, but the "tap to connect" hint always shows.
-        v.setViewVisibility(R.id.artist, config.showArtist || (nothing && !hasAccess) ? View.VISIBLE : View.GONE);
-        v.setTextColor(R.id.title, t.text);
-        v.setTextColor(R.id.artist, t.textSecondary);
+        // Text content. A bound player with nothing to show names itself rather than borrowing
+        // another app's metadata.
+        boolean bound = config.boundPackage != null;
+        boolean idle = TextUtils.isEmpty(np.title);
+        CharSequence title, artist;
+        if (!idle) {
+            title = np.title;
+            artist = np.artist == null ? "" : np.artist;
+        } else if (!hasAccess) {
+            title = context.getText(R.string.nothing_playing);
+            artist = context.getText(R.string.tap_to_connect);
+        } else if (bound) {
+            title = Players.label(context, config.boundPackage, config.boundLabel);
+            artist = context.getText(Players.isInstalled(context, config.boundPackage)
+                    ? R.string.player_not_playing : R.string.player_not_installed);
+        } else {
+            title = context.getText(R.string.nothing_playing);
+            artist = context.getText(R.string.app_name);
+        }
+
+        // Typography: fit the block to the row height, then let long titles shrink a little.
+        float fontScale = context.getResources().getConfiguration().fontScale;
+        boolean forceArtist = idle && !hasAccess; // the "tap to connect" hint always shows
+        Typography ty = Typography.fitHeight(config.showTitle, config.titleSize, config.titleLines,
+                config.showArtist || forceArtist, config.artistSize, heightDp - liftDp - TEXT_BREATHING_DP, fontScale);
+        float titleSp = ty.titleSp;
+        if (config.fitTitle && ty.showTitle) {
+            float availableDp = widthDp - s.pad - (config.showArt ? s.art + INFO_START_DP : 0) - INFO_END_DP
+                    - (config.showPrevious ? s.sideWidth : 0) - s.playWidth - (config.showNext ? s.sideWidth : 0)
+                    - endPadDp;
+            titleSp = Typography.fitWidth(ty.titleSp, ty.titleLines, px(context, Math.max(40, availableDp)),
+                    measure(context, title, config.titleWeight));
+        }
+        int titleView = TITLE_VIEWS[config.titleWeight.ordinal()];
+        for (int id : TITLE_VIEWS) {
+            v.setViewVisibility(id, ty.showTitle && id == titleView ? View.VISIBLE : View.GONE);
+            v.setTextViewText(id, title);
+            v.setTextColor(id, t.text);
+            v.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, titleSp);
+            v.setInt(id, "setMaxLines", ty.titleLines);
+        }
+        int artistView = config.artistWeight == WidgetConfig.Weight.REGULAR ? R.id.artist : R.id.artist_medium;
+        for (int id : new int[]{R.id.artist, R.id.artist_medium}) {
+            v.setViewVisibility(id, ty.showArtist && id == artistView ? View.VISIBLE : View.GONE);
+            v.setTextViewText(id, artist);
+            v.setTextColor(id, t.textSecondary);
+            // Only when the title shrank to fit; a deliberate size choice is left alone.
+            v.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, ty.showTitle && titleSp < ty.titleSp
+                    ? Typography.artistFor(titleSp, ty.artistSp) : ty.artistSp);
+        }
 
         // Artwork vs fallback tile: separate views, so the tile's tint can never leak onto artwork.
         boolean circle = config.artShape == WidgetConfig.ArtShape.CIRCLE;
@@ -157,18 +200,52 @@ public final class WidgetRenderer {
         v.setInt(R.id.viz_static, "setImageAlpha", VIZ_ALPHA);
         v.setImageViewResource(R.id.viz_static, config.visualizer == WidgetConfig.Visualizer.WAVE
                 ? R.drawable.viz_wave_0 : R.drawable.viz_bars_0);
-        setPlaying(context, v, np.playing && !nothing, config.visualizer, icons);
+        setPlaying(context, v, np.playing && !idle, config.visualizer, icons);
 
-        v.setOnClickPendingIntent(R.id.shuffle, control(context, MediaSessions.Action.SHUFFLE));
-        v.setOnClickPendingIntent(R.id.previous, control(context, MediaSessions.Action.PREVIOUS));
-        v.setOnClickPendingIntent(R.id.play_pause, control(context, MediaSessions.Action.PLAY_PAUSE));
-        v.setOnClickPendingIntent(R.id.next, control(context, MediaSessions.Action.NEXT));
+        // A bound player that has no session can't be controlled: play opens the player (the one
+        // reliable way to start it from a widget), skip/shuffle rest dimmed. Never a media key,
+        // which the system could deliver to a different app.
+        boolean dormant = bound && !np.hasSession;
+        int controlAlpha = dormant ? DORMANT_ALPHA : 0xFF;
+        v.setInt(R.id.previous, "setImageAlpha", controlAlpha);
+        v.setInt(R.id.next, "setImageAlpha", controlAlpha);
+        if (dormant) v.setInt(R.id.shuffle, "setImageAlpha", DORMANT_ALPHA);
+        PendingIntent launchBound = dormant ? launchPlayer(context, appWidgetId, config.boundPackage) : null;
+        v.setOnClickPendingIntent(R.id.shuffle, dormant ? null : control(context, appWidgetId, MediaSessions.Action.SHUFFLE));
+        v.setOnClickPendingIntent(R.id.previous, dormant ? null : control(context, appWidgetId, MediaSessions.Action.PREVIOUS));
+        v.setOnClickPendingIntent(R.id.play_pause, dormant ? launchBound
+                : control(context, appWidgetId, MediaSessions.Action.PLAY_PAUSE));
+        v.setOnClickPendingIntent(R.id.next, dormant ? null : control(context, appWidgetId, MediaSessions.Action.NEXT));
 
         PendingIntent open = openIntent(context, appWidgetId, config, np, hasAccess);
         v.setOnClickPendingIntent(android.R.id.background, open);
         v.setOnClickPendingIntent(R.id.art_box, open);
         v.setOnClickPendingIntent(R.id.info, open);
         return v;
+    }
+
+    /** Title view per {@link WidgetConfig.Weight} (RemoteViews can't change a typeface at runtime). */
+    private static final int[] TITLE_VIEWS = {R.id.title_regular, R.id.title, R.id.title_bold};
+    private static final float INFO_START_DP = 12, INFO_END_DP = 4;
+    /** Vertical breathing room kept around the text block, dp. */
+    private static final float TEXT_BREATHING_DP = 10;
+    private static final int DORMANT_ALPHA = 0x5C;
+
+    /** Measures a title in the system font at a weight, for {@link Typography#fitWidth}. */
+    private static Typography.Measure measure(Context context, CharSequence text, WidgetConfig.Weight weight) {
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT,
+                    weight == WidgetConfig.Weight.BOLD ? 700 : weight == WidgetConfig.Weight.MEDIUM ? 500 : 400, false));
+        } else {
+            paint.setTypeface(weight == WidgetConfig.Weight.REGULAR ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
+        }
+        String s = text.toString();
+        return sp -> {
+            paint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp,
+                    context.getResources().getDisplayMetrics()));
+            return paint.measureText(s);
+        };
     }
 
     private static final int VIZ_ALPHA = 0xB8;
@@ -280,6 +357,8 @@ public final class WidgetRenderer {
     /** Proportions for one row. Pure, unit-tested. All values in dp. */
     static final class Sizes {
         float pad, art, play, playIcon, sideTouch, sideIcon;
+        /** Horizontal extent of the controls: full-height targets, a little narrower to give the title room. */
+        float playWidth, sideWidth;
 
         static Sizes forHeight(float h) {
             Sizes s = new Sizes();
@@ -291,6 +370,8 @@ public final class WidgetRenderer {
             s.playIcon = Math.min(clamp(inner * 0.6f, 30, 38), s.play - 8);
             s.sideTouch = Math.min(48, Math.max(inner, 36));
             s.sideIcon = clamp(s.playIcon * 0.72f, 22, 27);
+            s.playWidth = Math.min(s.play, 52);
+            s.sideWidth = Math.min(s.sideTouch, 44);
             return s;
         }
 
@@ -334,14 +415,22 @@ public final class WidgetRenderer {
         wallpaper = 0;
     }
 
-    private static PendingIntent control(Context context, MediaSessions.Action action) {
+    /** A transport action for one widget, so the provider can route it to that widget's player. */
+    private static PendingIntent control(Context context, int appWidgetId, MediaSessions.Action action) {
         Intent i = new Intent(context, RadiationWidgetProvider.class)
                 .setAction(RadiationWidgetProvider.ACTION_CONTROL)
                 .putExtra(RadiationWidgetProvider.EXTRA_ACTION, action.name())
-                // Distinct data so each action gets its own PendingIntent.
-                .setData(android.net.Uri.parse("radiation://control/" + action.name()));
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                // Distinct data so each widget and action gets its own PendingIntent.
+                .setData(android.net.Uri.parse("radiation://control/" + appWidgetId + "/" + action.name()));
         return PendingIntent.getBroadcast(context, 0, i,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    /** Opens the bound player (or this widget's Studio page if the app is gone). */
+    private static PendingIntent launchPlayer(Context context, int appWidgetId, String packageName) {
+        Intent launch = context.getPackageManager().getLaunchIntentForPackage(packageName);
+        return activity(context, appWidgetId, launch != null ? launch : studioIntent(context, appWidgetId));
     }
 
     /** Null means "tap does nothing"; RemoteViews then clears any previous click handler. */
@@ -359,6 +448,11 @@ public final class WidgetRenderer {
             }
             default:
                 break;
+        }
+        if (config.boundPackage != null) {
+            // Bound: the bound player, at its now-playing screen while it has a session.
+            if (np.hasSession && np.sessionActivity != null) return np.sessionActivity;
+            return launchPlayer(context, appWidgetId, config.boundPackage);
         }
         if (np.packageName == null) return activity(context, appWidgetId, studioIntent(context, appWidgetId));
         // The player's own intent opens it on its "now playing" screen.

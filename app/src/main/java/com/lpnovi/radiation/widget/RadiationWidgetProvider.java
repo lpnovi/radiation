@@ -22,13 +22,17 @@ public class RadiationWidgetProvider extends AppWidgetProvider {
             String name = intent.getStringExtra(EXTRA_ACTION);
             if (name == null) return;
             MediaSessions.Action action = MediaSessions.Action.valueOf(name);
-            NowPlaying now = WidgetUpdater.latest();
+            // Each control carries its widget, so it targets that widget's player.
+            int id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+            String bound = WidgetConfig.load(context, id).boundPackage;
+            NowPlaying now = WidgetUpdater.latest(bound);
             if (action == MediaSessions.Action.PLAY_PAUSE) {
-                WidgetUpdater.showOptimistic(context, now.withPlaying(!now.playing));
+                WidgetUpdater.showOptimistic(context, bound, now.withPlaying(!now.playing));
             } else if (action == MediaSessions.Action.SHUFFLE && now.shuffle != Shuffle.UNSUPPORTED) {
-                WidgetUpdater.showOptimistic(context, now.withShuffle(now.shuffle == Shuffle.ON ? Shuffle.OFF : Shuffle.ON));
+                WidgetUpdater.showOptimistic(context, bound,
+                        now.withShuffle(now.shuffle == Shuffle.ON ? Shuffle.OFF : Shuffle.ON));
             }
-            MediaSessions.perform(context, action);
+            MediaSessions.perform(context, action, bound);
             return;
         }
         super.onReceive(context, intent);

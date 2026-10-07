@@ -84,11 +84,13 @@ public final class NowPlayingTracker {
     private long holdStartedAt;
     private String retriedTrack;
 
-    public Result resolve(Context context) {
-        MediaController controller = MediaSessions.active(context);
+    /** Resolves what widgets with this binding (null = follow active) should show. */
+    public Result resolve(Context context, @Nullable String boundPackage) {
+        MediaController controller = MediaSessions.active(context, boundPackage);
         if (controller == null) {
-            reset();
-            return new Result(NowPlaying.NOTHING, 0);
+            NowPlaying idle = withoutSession(boundPackage, shown);
+            if (boundPackage == null) reset();
+            return new Result(idle, 0);
         }
         MediaMetadata meta = controller.getMetadata();
         String pkg = controller.getPackageName();
@@ -100,7 +102,7 @@ public final class NowPlayingTracker {
                 + (meta == null ? null : meta.getString(MediaMetadata.METADATA_KEY_ALBUM));
 
         NowPlaying live = new NowPlaying(pkg, title, artist, null, null, ColorEngine.NONE,
-                MediaSessions.isPlaying(controller), Shuffle.of(controller), controller.getSessionActivity());
+                MediaSessions.isPlaying(controller), Shuffle.of(controller), controller.getSessionActivity(), true);
         Bitmap source = meta == null ? null : readArtwork(context, meta);
         if (source != null) {
             String artKey = track + '\u0000' + fingerprint(source);
@@ -112,7 +114,7 @@ public final class NowPlayingTracker {
                         + Integer.toHexString(p.seed) + " for " + title);
             }
             live = new NowPlaying(pkg, title, artist, p.art, artKey, p.seed, live.playing, live.shuffle,
-                    live.sessionActivity);
+                    live.sessionActivity, true);
         }
 
         long now = SystemClock.uptimeMillis();
@@ -146,6 +148,19 @@ public final class NowPlayingTracker {
             log("no artwork for " + title + "; showing fallback, rechecking in " + RETRY_MS + "ms");
         }
         return new Result(live, recheck);
+    }
+
+    /**
+     * What to show when the widget's player has no session. Follow-active: nothing. Bound: the
+     * player's last-known track (paused, not controllable) if we saw one, otherwise an idle state
+     * that names the player. Never another app's metadata. Pure: unit-tested.
+     */
+    static NowPlaying withoutSession(@Nullable String boundPackage, NowPlaying shown) {
+        if (boundPackage == null) return NowPlaying.NOTHING;
+        if (boundPackage.equals(shown.packageName) && shown.title != null && shown.title.length() > 0) {
+            return shown.asLastKnown();
+        }
+        return NowPlaying.idle(boundPackage);
     }
 
     private void reset() {

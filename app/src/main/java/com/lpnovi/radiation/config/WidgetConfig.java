@@ -41,6 +41,8 @@ public final class WidgetConfig {
 
     public enum TapAction { ACTIVE_APP, SPOTIFY, NOTHING }
 
+    public enum Weight { REGULAR, MEDIUM, BOLD }
+
     public Background background = Background.ALBUM_TINT;
     public int customColor = 0xFF1C1B1F;
     /** Background layer only, 0 (transparent) – 255 (opaque). Never applied to foreground. */
@@ -57,6 +59,20 @@ public final class WidgetConfig {
     public boolean showNext = true;
     public boolean showShuffle = false;
     public TapAction tapAction = TapAction.ACTIVE_APP;
+
+    /** Player this widget follows; null = whichever session is active (the original behavior). */
+    public String boundPackage = null;
+    /** Label of the bound app, kept so the widget can name it even if the app is uninstalled. */
+    public String boundLabel = null;
+
+    // Typography. Sizes in sp; the renderer may shrink long titles within limits (see Typography).
+    public boolean showTitle = true;
+    public float titleSize = 15f;
+    public Weight titleWeight = Weight.MEDIUM;
+    public int titleLines = 1;
+    public boolean fitTitle = true;
+    public float artistSize = 13f;
+    public Weight artistWeight = Weight.REGULAR;
 
     /** 0% = transparent background, 100% = fully opaque background. */
     public static int alphaFromPercent(int percent) {
@@ -97,6 +113,15 @@ public final class WidgetConfig {
         c.showNext = p.getBoolean(k + "showNext", c.showNext);
         c.showShuffle = p.getBoolean(k + "showShuffle", c.showShuffle);
         c.tapAction = parse(TapAction.class, p.getString(k + "tapAction", null), c.tapAction);
+        c.boundPackage = p.getString(k + "boundPackage", c.boundPackage);
+        c.boundLabel = p.getString(k + "boundLabel", c.boundLabel);
+        c.showTitle = p.getBoolean(k + "showTitle", c.showTitle);
+        c.titleSize = p.getFloat(k + "titleSize", c.titleSize);
+        c.titleWeight = parse(Weight.class, p.getString(k + "titleWeight", null), c.titleWeight);
+        c.titleLines = Math.max(1, Math.min(2, p.getInt(k + "titleLines", c.titleLines)));
+        c.fitTitle = p.getBoolean(k + "fitTitle", c.fitTitle);
+        c.artistSize = p.getFloat(k + "artistSize", c.artistSize);
+        c.artistWeight = parse(Weight.class, p.getString(k + "artistWeight", null), c.artistWeight);
         return c;
     }
 
@@ -119,6 +144,15 @@ public final class WidgetConfig {
                 .putBoolean(k + "showNext", showNext)
                 .putBoolean(k + "showShuffle", showShuffle)
                 .putString(k + "tapAction", tapAction.name())
+                .putString(k + "boundPackage", boundPackage)
+                .putString(k + "boundLabel", boundLabel)
+                .putBoolean(k + "showTitle", showTitle)
+                .putFloat(k + "titleSize", titleSize)
+                .putString(k + "titleWeight", titleWeight.name())
+                .putInt(k + "titleLines", titleLines)
+                .putBoolean(k + "fitTitle", fitTitle)
+                .putFloat(k + "artistSize", artistSize)
+                .putString(k + "artistWeight", artistWeight.name())
                 .apply();
     }
 

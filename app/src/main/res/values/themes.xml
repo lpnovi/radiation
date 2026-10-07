@@ -67,6 +67,27 @@
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
+    <style name="Studio.ValueRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="Studio.ValueLabel" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
+    </style>
+
+    <style name="Studio.Value" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceLabelLarge</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+
     <style name="Studio.Hint" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
@@ -95,5 +116,38 @@
         <item name="android:maxHeight">@dimen/viz_height</item>
         <item name="android:importantForAccessibility">no</item>
         <item name="android:visibility">gone</item>
+    </style>
+    <!-- Widget text (RemoteViews). No font family: the launcher draws it in the system font. -->
+    <style name="Widget.Title" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:text">@string/nothing_playing</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+    <!-- Medium is weight 500 on Android 9+ (values-v28); bold before. -->
+    <style name="Widget.Title.Medium">
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="Widget.Title.Bold">
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Widget.Artist" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:text">@string/app_name</item>
+        <item name="android:textColor">#B8FFFFFF</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+    <style name="Widget.Artist.Medium">
+        <item name="android:textStyle">bold</item>
     </style>
 </resources>

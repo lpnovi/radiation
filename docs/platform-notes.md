@@ -58,3 +58,21 @@ What Android's AppWidget / RemoteViews model allows, and what Radiation does abo
 | Pastel album colors | Same album seed and hue as Rich, placed in fixed soft bands instead of being darkened: surface lightness 0.90 (saturation 0.20-0.40), glow 0.79 (0.30-0.55), accent 0.78 (0.30-0.58). The saturation floor prevents muddy grays, the ceiling prevents candy colors, and fixed lightness makes very dark, bright and saturated art land in the same range. Monochrome art stays neutral; no artwork gives a clean warm-neutral light surface. Contrast rules then pick dark text and deepen the controls (same hue) on these light surfaces. |
 | Gradient readability | If a gradient's two ends straddle the mid-tones (e.g. a pastel glow made translucent over a dark wallpaper), no text color reads on both; the glow is pulled toward the surface until black or white text does. |
 | Icon sets | Rounded (default, Material Symbols Rounded), Sharp (classic Material), Line (1.75 strokes, round caps/joins), Bold (filled + stroked shapes, thick round bars). Each set is one drawable family covering play, pause, previous, next and shuffle off/on (with a dot in that set's style), all with the same pressed-state shrink. Line and Bold are stroke-built vectors; tinting them with a color filter is safe (unlike a stroke-only `GradientDrawable`, a vector path without a fill paints no interior). |
+
+## Player binding
+
+| Topic | Reality | Radiation |
+|---|---|---|
+| Discovering players | Android has no "list music players" API. | Union of: apps with a MediaBrowserService, a media-button receiver, an activity that opens audio files, or a media session right now; filtered to launchable apps. Matching `<queries>` make them visible on Android 11+. Apps currently playing are listed first. |
+| Bound vs follow active | Sessions are listed per package. | A bound widget only considers its package's sessions (the playing one first if it has several). Another app starting playback never takes it over. Each binding in use is resolved once per render, with its own artwork tracker. |
+| Controls | Without a session there is nothing to address; a media key goes wherever the system decides. | Controls carry their widget id and target that widget's player. A bound player with no session: play opens the app (reliable), skip/shuffle are dimmed and inert; never a media key. |
+| No session / closed / uninstalled | | Last-known track (paused) if seen, otherwise the app's name with "Not playing" / "Not installed" (remembered name). Binding survives updates/reinstalls (same package). Without notification access no session is readable, so bound widgets show "Tap to connect". |
+| Players without sessions | Some apps play audio without publishing a media session (e.g. YouTube Music's local-file preview). | Nothing to follow or control; shown as not playing. |
+
+## Typography
+
+| Topic | Radiation |
+|---|---|
+| Weight | RemoteViews can't change a typeface at runtime, so the layout has one title view per weight (regular/medium/bold) and two for the artist; the renderer shows one. Weights use the system font (`textFontWeight`, Android 9+; bold below). |
+| Size and lines | Set at runtime (`setTextViewTextSize`, `setMaxLines`). The text block is fitted to the row height (rebalancing sizes, then dropping the artist, then the second line), so text never overlaps controls, shuffle or visualizer. |
+| Long titles | Measured in the system font; a title that doesn't fit shrinks by at most 2.5sp (never below 11sp), keeping the artist at least 1.5sp smaller, then ellipsizes. Controls are a little narrower than tall (44/52dp wide, full-height targets) to give the title more room. |

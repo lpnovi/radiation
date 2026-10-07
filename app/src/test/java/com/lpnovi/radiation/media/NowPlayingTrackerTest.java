@@ -42,4 +42,32 @@ public class NowPlayingTrackerTest {
     public void nothingToProtectMeansShow() {
         assertEquals(SHOW, decide(true, false, false, false, 0));
     }
+
+    // --- Bound player without a session ---
+
+    private static NowPlaying shown(String pkg, String title) {
+        return new NowPlaying(pkg, title, "Artist", null, null, 0, true, Shuffle.ON, null, true);
+    }
+
+    @Test
+    public void followActiveWithoutSessionShowsNothing() {
+        assertEquals(NowPlaying.NOTHING, NowPlayingTracker.withoutSession(null, shown("a.player", "Song")));
+    }
+
+    @Test
+    public void boundPlayerKeepsItsLastKnownTrackPausedAndUncontrollable() {
+        NowPlaying np = NowPlayingTracker.withoutSession("a.player", shown("a.player", "Song"));
+        assertEquals("Song", np.title);
+        assertEquals(false, np.playing);
+        assertEquals(false, np.hasSession);
+        assertEquals(Shuffle.UNSUPPORTED, np.shuffle);
+    }
+
+    @Test
+    public void boundPlayerNeverShowsAnotherAppsTrack() {
+        NowPlaying np = NowPlayingTracker.withoutSession("a.player", shown("other.player", "Not ours"));
+        assertEquals("a.player", np.packageName);
+        assertEquals(null, np.title);
+        assertEquals(false, np.hasSession);
+    }
 }

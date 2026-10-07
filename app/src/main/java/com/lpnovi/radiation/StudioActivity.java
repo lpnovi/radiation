@@ -5,18 +5,31 @@ import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.Shader;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RemoteViews;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButtonToggleGroup;
@@ -24,6 +37,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
 import com.lpnovi.radiation.config.WidgetConfig;
@@ -34,13 +48,18 @@ import com.lpnovi.radiation.config.WidgetConfig.ArtShape;
 import com.lpnovi.radiation.config.WidgetConfig.Background;
 import com.lpnovi.radiation.config.WidgetConfig.TapAction;
 import com.lpnovi.radiation.config.WidgetConfig.Visualizer;
+import com.lpnovi.radiation.config.WidgetConfig.Weight;
 import com.lpnovi.radiation.media.MediaListenerService;
 import com.lpnovi.radiation.media.MediaSessions;
+import com.lpnovi.radiation.media.NowPlaying;
+import com.lpnovi.radiation.widget.Players;
 import com.lpnovi.radiation.widget.RadiationWidgetProvider;
 import com.lpnovi.radiation.widget.WidgetRenderer;
 import com.lpnovi.radiation.widget.WidgetUpdater;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.IntConsumer;
 
 /**
@@ -65,11 +84,14 @@ public class StudioActivity extends AppCompatActivity {
     private static final int[] BACKGROUND_HINTS = {R.string.hint_bg_album_tint, R.string.hint_bg_album_gradient,
             R.string.hint_bg_amoled, R.string.hint_bg_material_you, R.string.hint_bg_glass, R.string.hint_bg_custom};
     private static final int[] ACCENTS = {R.id.accent_album, R.id.accent_material_you, R.id.accent_mono};
-    private static final int[] VISUALIZERS = {R.id.viz_off, R.id.viz_bars, R.id.viz_wave};
+    private static final int[] VISUALIZERS = {R.id.choice_viz_off, R.id.choice_viz_bars, R.id.choice_viz_wave};
     private static final int[] TONES = {R.id.tone_rich, R.id.tone_pastel};
     private static final int[] ICON_STYLES = {R.id.icons_rounded, R.id.icons_sharp, R.id.icons_line, R.id.icons_bold};
     private static final int[] ART_SHAPES = {R.id.art_rounded, R.id.art_circle};
     private static final int[] TAP_ACTIONS = {R.id.tap_active, R.id.tap_spotify, R.id.tap_nothing};
+    private static final int[] TITLE_WEIGHTS = {R.id.ty_title_regular, R.id.ty_title_medium, R.id.ty_title_bold};
+    private static final int[] ARTIST_WEIGHTS = {R.id.ty_artist_regular, R.id.ty_artist_medium};
+    private static final int[] TITLE_LINES = {R.id.lines_one, R.id.lines_two};
 
     /** Custom background swatches: deep tones that keep light text, and two light ones that flip it. */
     private static final int[] SWATCHES = {0xFF000000, 0xFF1C1B1F, 0xFF0F1B2D, 0xFF12261E, 0xFF2A1630,
@@ -91,10 +113,16 @@ public class StudioActivity extends AppCompatActivity {
     private View previewContent;
     private ChipGroup picker, backgrounds;
     private MaterialButtonToggleGroup accents, tones, iconStyles, visualizers, artShapes, tapActions;
-    private Slider opacity;
-    private TextView opacityValue, backgroundHint;
+    private MaterialButtonToggleGroup titleWeights, artistWeights, titleLines;
+    private Slider opacity, titleSize, artistSize;
+    private TextView opacityValue, backgroundHint, titleSizeValue, artistSizeValue, bindValue;
+    private ImageView bindIcon;
     private LinearLayout swatches;
     private MaterialSwitch outline, showArt, showArtist, showPrevious, showNext, showShuffle;
+    private MaterialSwitch showTitle, fitTitle, previewSample;
+    /** Studio-only: show long sample metadata in the preview instead of what's playing. */
+    private boolean useSample;
+    private NowPlaying sample;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,6 +168,31 @@ public class StudioActivity extends AppCompatActivity {
         showPrevious = findViewById(R.id.show_previous);
         showNext = findViewById(R.id.show_next);
         showShuffle = findViewById(R.id.show_shuffle);
+        titleWeights = findViewById(R.id.title_weight_group);
+        artistWeights = findViewById(R.id.artist_weight_group);
+        titleLines = findViewById(R.id.title_lines_group);
+        titleSize = findViewById(R.id.title_size);
+        artistSize = findViewById(R.id.artist_size);
+        titleSizeValue = findViewById(R.id.title_size_value);
+        artistSizeValue = findViewById(R.id.artist_size_value);
+        showTitle = findViewById(R.id.show_title);
+        fitTitle = findViewById(R.id.fit_title);
+        previewSample = findViewById(R.id.preview_sample);
+        bindValue = findViewById(R.id.bind_value);
+        bindIcon = findViewById(R.id.bind_icon);
+
+        findViewById(R.id.bind_row).setOnClickListener(x -> showPlayerPicker());
+        onChoice(titleWeights, TITLE_WEIGHTS, i -> edit(() -> config.titleWeight = Weight.values()[i]));
+        onChoice(artistWeights, ARTIST_WEIGHTS, i -> edit(() -> config.artistWeight = Weight.values()[i]));
+        onChoice(titleLines, TITLE_LINES, i -> edit(() -> config.titleLines = i + 1));
+        titleSize.addOnChangeListener((s, value, fromUser) -> edit(() -> config.titleSize = value));
+        artistSize.addOnChangeListener((s, value, fromUser) -> edit(() -> config.artistSize = value));
+        showTitle.setOnCheckedChangeListener((b, on) -> edit(() -> config.showTitle = on));
+        fitTitle.setOnCheckedChangeListener((b, on) -> edit(() -> config.fitTitle = on));
+        previewSample.setOnCheckedChangeListener((b, on) -> {
+            useSample = on;
+            renderPreview();
+        });
 
         findViewById(R.id.access_grant).setOnClickListener(x -> openAccessSettings());
         View pin = findViewById(R.id.pin_widget);
@@ -267,6 +320,16 @@ public class StudioActivity extends AppCompatActivity {
         showPrevious.setChecked(config.showPrevious);
         showNext.setChecked(config.showNext);
         showShuffle.setChecked(config.showShuffle);
+        showTitle.setChecked(config.showTitle);
+        fitTitle.setChecked(config.fitTitle);
+        titleWeights.check(TITLE_WEIGHTS[config.titleWeight.ordinal()]);
+        artistWeights.check(ARTIST_WEIGHTS[Math.min(1, config.artistWeight.ordinal())]);
+        titleLines.check(TITLE_LINES[config.titleLines - 1]);
+        titleSize.setValue(snap(config.titleSize, titleSize));
+        artistSize.setValue(snap(config.artistSize, artistSize));
+        // Long sample text by default when nothing is playing for this widget, so typography is judgeable.
+        useSample = TextUtils.isEmpty(WidgetUpdater.latest(config.boundPackage).title);
+        previewSample.setChecked(useSample);
         binding = false;
         refreshDependentControls();
         renderPreview();
@@ -299,6 +362,11 @@ public class StudioActivity extends AppCompatActivity {
         // Glass always has its hairline edge, so the separate outline switch would do nothing.
         outline.setEnabled(config.background != Background.GLASS);
         for (int i = 0; i < artShapes.getChildCount(); i++) artShapes.getChildAt(i).setEnabled(config.showArt);
+        titleSizeValue.setText(getString(R.string.size_sp, config.titleSize));
+        artistSizeValue.setText(getString(R.string.size_sp, config.artistSize));
+        findViewById(R.id.title_options).setVisibility(config.showTitle ? View.VISIBLE : View.GONE);
+        findViewById(R.id.artist_options).setVisibility(config.showArtist ? View.VISIBLE : View.GONE);
+        refreshBindRow();
     }
 
     private void buildSwatches() {
@@ -334,6 +402,123 @@ public class StudioActivity extends AppCompatActivity {
         });
     }
 
+    // --- Bind to player ---
+
+    /** The bound player's icon and name, or "Follow active player". */
+    private void refreshBindRow() {
+        if (config.boundPackage == null) {
+            bindValue.setText(R.string.follow_active);
+            bindIcon.setImageResource(R.drawable.ic_music_note);
+            bindIcon.setImageTintList(ColorStateList.valueOf(
+                    MaterialColors.getColor(bindIcon, com.google.android.material.R.attr.colorOnSurfaceVariant)));
+            return;
+        }
+        CharSequence label = Players.label(this, config.boundPackage, config.boundLabel);
+        boolean installed = Players.isInstalled(this, config.boundPackage);
+        bindValue.setText(installed ? label : getString(R.string.player_unavailable, label));
+        try {
+            bindIcon.setImageTintList(null);
+            bindIcon.setImageDrawable(getPackageManager().getApplicationIcon(config.boundPackage));
+        } catch (PackageManager.NameNotFoundException e) {
+            bindIcon.setImageResource(R.drawable.ic_music_note);
+        }
+    }
+
+    /** Lists players (found off the main thread) in a dialog; picking one binds this widget to it. */
+    private void showPlayerPicker() {
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return;
+        AlertDialog loading = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.picker_title)
+                .setMessage(R.string.picker_loading)
+                .show();
+        Context app = getApplicationContext();
+        new Thread(() -> {
+            List<Players.Player> found = Players.find(app);
+            runOnUiThread(() -> {
+                loading.dismiss();
+                if (!isFinishing()) showPlayerList(found);
+            });
+        }, "radiation-players").start();
+    }
+
+    private void showPlayerList(List<Players.Player> found) {
+        // Entries: "Follow active player", every player found, and a bound app that has since vanished.
+        List<String> packages = new ArrayList<>();
+        List<CharSequence> names = new ArrayList<>();
+        List<Drawable> icons = new ArrayList<>();
+        List<CharSequence> statuses = new ArrayList<>();
+        packages.add(null);
+        names.add(getString(R.string.follow_active));
+        icons.add(null);
+        statuses.add(null);
+        boolean boundListed = config.boundPackage == null;
+        for (Players.Player p : found) {
+            packages.add(p.packageName);
+            names.add(p.label);
+            icons.add(p.icon);
+            statuses.add(p.hasSession ? getString(R.string.playing_now) : null);
+            boundListed |= p.packageName.equals(config.boundPackage);
+        }
+        if (!boundListed) {
+            packages.add(config.boundPackage);
+            names.add(Players.label(this, config.boundPackage, config.boundLabel));
+            icons.add(null);
+            statuses.add(getString(R.string.player_not_installed));
+        }
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.item_player, packages) {
+            @NonNull
+            @Override
+            public View getView(int position, View row, @NonNull ViewGroup parent) {
+                if (row == null) row = inflater.inflate(R.layout.item_player, parent, false);
+                ImageView icon = row.findViewById(R.id.player_icon);
+                if (icons.get(position) != null) {
+                    icon.setImageTintList(null);
+                    icon.setImageDrawable(icons.get(position));
+                } else {
+                    icon.setImageResource(R.drawable.ic_music_note);
+                    icon.setImageTintList(ColorStateList.valueOf(MaterialColors.getColor(icon,
+                            com.google.android.material.R.attr.colorOnSurfaceVariant)));
+                }
+                ((TextView) row.findViewById(R.id.player_name)).setText(names.get(position));
+                TextView status = row.findViewById(R.id.player_status);
+                status.setVisibility(statuses.get(position) == null ? View.GONE : View.VISIBLE);
+                status.setText(statuses.get(position));
+                boolean selected = java.util.Objects.equals(packages.get(position), config.boundPackage);
+                row.findViewById(R.id.player_check).setVisibility(selected ? View.VISIBLE : View.INVISIBLE);
+                return row;
+            }
+        };
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.picker_title)
+                .setAdapter(adapter, (d, which) -> edit(() -> {
+                    config.boundPackage = packages.get(which);
+                    config.boundLabel = which == 0 ? null : names.get(which).toString();
+                }))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Snaps a stored value onto a slider's range and step (stored values may predate the slider). */
+    private static float snap(float value, Slider slider) {
+        float stepped = Math.round(value / slider.getStepSize()) * slider.getStepSize();
+        return Math.max(slider.getValueFrom(), Math.min(slider.getValueTo(), stepped));
+    }
+
+    /** Long realistic metadata with sample artwork, for judging typography. */
+    private NowPlaying sample() {
+        if (sample == null) {
+            Bitmap art = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888);
+            Paint paint = new Paint();
+            paint.setShader(new LinearGradient(0, 0, 256, 256, 0xFFC0504D, 0xFF2D4A7A, Shader.TileMode.CLAMP));
+            new Canvas(art).drawRect(0, 0, 256, 256, paint);
+            sample = NowPlaying.sample(getString(R.string.sample_title), getString(R.string.sample_artist),
+                    art, 0xFFB5463F);
+        }
+        return sample;
+    }
+
     private static int indexOf(int[] ids, int id) {
         for (int i = 0; i < ids.length; i++) if (ids[i] == id) return i;
         return 0;
@@ -351,7 +536,8 @@ public class StudioActivity extends AppCompatActivity {
         float widthDp = placed ? WidgetRenderer.widthDp(this, manager, widgetId) : 320;
         float heightDp = !placed
                 ? 80 : WidgetRenderer.heightDp(this, manager, widgetId);
-        RemoteViews views = WidgetRenderer.build(app, widgetId, config, WidgetUpdater.latest(),
+        NowPlaying np = useSample ? sample() : WidgetUpdater.latest(config.boundPackage);
+        RemoteViews views = WidgetRenderer.build(app, widgetId, config, np,
                 MediaSessions.hasAccess(this), widthDp, heightDp);
         ViewGroup.LayoutParams lp = preview.getLayoutParams();
         int heightPx = Math.round(heightDp * getResources().getDisplayMetrics().density);

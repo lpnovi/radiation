@@ -25,7 +25,8 @@ import android.support.v4.media.session.PlaybackStateCompat;
  */
 public class DebugPlayer extends BroadcastReceiver {
 
-    private static final String[] TITLES = {"Colorful", "Very dark", "Very bright", "Monochrome", "No artwork"};
+    private static final String[] TITLES = {"Locked Away (feat. Adam Levine)", "Very dark", "Very bright",
+            "Monochrome", "No artwork"};
     private static final int[][] ART = {
             {0xFFE63946, 0xFF457B9D}, {0xFF05060A, 0xFF0D1020}, {0xFFFFFDF5, 0xFFF1ECE0},
             {0xFF8A8A8A, 0xFF2E2E2E}, null,

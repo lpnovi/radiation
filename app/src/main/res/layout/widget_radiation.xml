@@ -123,6 +123,10 @@
                 android:visibility="gone" />
         </FrameLayout>
 
+        <!--
+          Metadata. One title view per weight (RemoteViews can't change a typeface at runtime); the
+          renderer shows one and sets size and line count. No font family anywhere: the system font.
+        -->
         <LinearLayout
             android:id="@+id/info"
             android:layout_width="0dp"
@@ -130,34 +134,31 @@
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:orientation="vertical"
-            android:paddingStart="14dp"
-            android:paddingEnd="6dp">
+            android:paddingStart="12dp"
+            android:paddingEnd="4dp">
+
+            <TextView
+                android:id="@+id/title_regular"
+                style="@style/Widget.Title"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:textFontWeight="500"
-                tools:targetApi="28"
-                android:textStyle="bold"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:text="@string/nothing_playing"
-                android:textColor="#FFFFFFFF"
-                android:textSize="16sp" />
+                style="@style/Widget.Title.Medium" />
+
+            <TextView
+                android:id="@+id/title_bold"
+                style="@style/Widget.Title.Bold"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/artist"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:ellipsize="end"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:text="@string/app_name"
-                android:textColor="#B8FFFFFF"
-                android:textSize="14sp" />
+                style="@style/Widget.Artist" />
+
+            <TextView
+                android:id="@+id/artist_medium"
+                style="@style/Widget.Artist.Medium"
+                android:visibility="gone" />
         </LinearLayout>
 
         <ImageButton

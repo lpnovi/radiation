@@ -27,7 +27,7 @@ public class SizesTest {
         for (float lift : new float[]{0, 5}) {
             for (float h = 80; h <= 140; h += 4) {
                 WidgetRenderer.Sizes s = WidgetRenderer.Sizes.forHeight(h);
-                WidgetRenderer.Corner c = WidgetRenderer.Corner.place(h, lift, s.sideIcon, 8 + s.sideTouch / 2);
+                WidgetRenderer.Corner c = WidgetRenderer.Corner.place(h, lift, s.sideIcon, 8 + s.sideWidth / 2);
                 float nextGlyphTop = (h - lift - s.sideIcon) / 2;
                 assertTrue("target width", c.height >= 28 && WidgetRenderer.Corner.WIDTH >= 56);
                 assertTrue("glyph 15-20dp at " + h, c.glyph >= 15 && c.glyph <= 20);
@@ -56,7 +56,9 @@ public class SizesTest {
         assertTrue(s.play >= 56);
         assertTrue(s.playIcon >= 34);
         // ~330dp wide 4-column widget: padding (22) + gaps (2) + elements must leave >= 80dp for track info.
-        assertTrue(330 - 22 - 2 - s.art - s.play - 2 * s.sideTouch >= 80);
+        assertTrue(330 - 22 - 2 - s.art - s.playWidth - 2 * s.sideWidth >= 80);
+        // Targets keep full height even though they are a touch narrower.
+        assertTrue(s.sideWidth >= 44 && s.playWidth >= 52);
         assertTrue(s.art >= 64);
     }
 }

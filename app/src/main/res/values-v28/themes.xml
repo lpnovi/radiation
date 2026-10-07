@@ -20,4 +20,14 @@
         <item name="android:textStyle">normal</item>
         <item name="android:textFontWeight">500</item>
     </style>
+
+    <!-- Widget text: true medium weight of the system font. -->
+    <style name="Widget.Title.Medium">
+        <item name="android:textStyle">normal</item>
+        <item name="android:textFontWeight">500</item>
+    </style>
+    <style name="Widget.Artist.Medium">
+        <item name="android:textStyle">normal</item>
+        <item name="android:textFontWeight">500</item>
+    </style>
 </resources>
