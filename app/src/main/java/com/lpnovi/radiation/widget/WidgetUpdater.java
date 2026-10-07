@@ -18,6 +18,7 @@ import com.lpnovi.radiation.media.LastPlayed;
 import com.lpnovi.radiation.media.MediaSessions;
 import com.lpnovi.radiation.media.NowPlaying;
 import com.lpnovi.radiation.media.NowPlayingTracker;
+import com.lpnovi.radiation.media.Shuffle;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,6 +54,10 @@ public final class WidgetUpdater {
 
     public static void request(Context context) {
         schedule(context, THROTTLE_MS, null);
+    }
+
+    public static void requestIn(Context context, long delayMs) {
+        schedule(context, delayMs, null);
     }
 
     /** For broadcast receivers: keeps the process alive (via goAsync) until the render lands. */
@@ -170,6 +175,8 @@ public final class WidgetUpdater {
             manager.updateAppWidget(ids[i], WidgetRenderer.build(context, ids[i], c, f));
         }
         if (nextSwitch != IdlePolicy.NEVER) schedule(context, nextSwitch + 50, null);
+        long shuffleCheck = Shuffle.recheckInMs(); // see whether a player ignored a shuffle command
+        if (shuffleCheck >= 0) schedule(context, shuffleCheck + 50, null);
     }
 
     /**

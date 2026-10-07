@@ -19,6 +19,11 @@ import android.support.v4.media.session.PlaybackStateCompat;
  *
  *   adb shell am broadcast -n com.lpnovi.radiation/.debug.DebugPlayer --es cmd start|next|prev|toggle|kill
  *
+ * Shuffle flavor, chosen at start ({@code --es shuffle ...}), to exercise each strategy:
+ *   standard (default) advertises ACTION_SET_SHUFFLE_MODE and reports its mode;
+ *   custom   offers shuffle only as a playback custom action (compat mode left at its default);
+ *   deaf     reports a compat mode (always NONE) but advertises nothing and ignores commands.
+ *
  * A MediaSessionCompat, like Spotify's, so shuffle works end to end. Mimics Spotify's habit of
  * publishing a new track's text first and its artwork ~400ms later, and cycles through
  * deliberately awkward artwork: colorful, near-black, near-white, monochrome, and none at all.
@@ -37,6 +42,8 @@ public class DebugPlayer extends BroadcastReceiver {
     private static MediaSessionCompat session;
     private static int index;
     private static boolean playing;
+    private static String flavor = "standard";
+    private static boolean customShuffle;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -44,11 +51,14 @@ public class DebugPlayer extends BroadcastReceiver {
         if (cmd == null) return;
         Context app = context.getApplicationContext();
         switch (cmd) {
-            case "start": ensure(app); playing = true; show(index); break;
+            case "start":
+                if (intent.getStringExtra("shuffle") != null) flavor = intent.getStringExtra("shuffle");
+                ensure(app); playing = true; show(index); break;
             case "next": ensure(app); show(index + 1); break;
             case "prev": ensure(app); show(index - 1); break;
             case "toggle": ensure(app); playing = !playing; state(); break;
             case "kill":
+                flavor = "standard";
                 if (session != null) {
                     session.release();
                     session = null;
@@ -66,7 +76,16 @@ public class DebugPlayer extends BroadcastReceiver {
             @Override public void onPause() { playing = false; state(); }
             @Override public void onSkipToNext() { show(index + 1); }
             @Override public void onSkipToPrevious() { show(index - 1); }
-            @Override public void onSetShuffleMode(int mode) { session.setShuffleMode(mode); }
+            @Override public void onSetShuffleMode(int mode) {
+                if ("standard".equals(flavor)) session.setShuffleMode(mode);
+            }
+            @Override public void onCustomAction(String action, android.os.Bundle extras) {
+                if ("custom".equals(flavor) && CUSTOM_SHUFFLE.equals(action)) {
+                    customShuffle = !customShuffle;
+                    android.util.Log.d("RadiationDebugPlayer", "custom shuffle -> " + customShuffle);
+                    state();
+                }
+            }
         }, main);
         session.setShuffleMode(PlaybackStateCompat.SHUFFLE_MODE_NONE);
         session.setActive(true);
@@ -92,12 +111,20 @@ public class DebugPlayer extends BroadcastReceiver {
         }
     }
 
+    private static final String CUSTOM_SHUFFLE = "com.example.player.TOGGLE_SHUFFLE";
+
     private static void state() {
         if (session == null) return;
-        session.setPlaybackState(new PlaybackStateCompat.Builder()
+        long shuffle = "standard".equals(flavor) ? PlaybackStateCompat.ACTION_SET_SHUFFLE_MODE : 0;
+        PlaybackStateCompat.Builder b = new PlaybackStateCompat.Builder();
+        if ("custom".equals(flavor)) {
+            b.addCustomAction(CUSTOM_SHUFFLE, customShuffle ? "Shuffle on" : "Shuffle off",
+                    android.R.drawable.ic_menu_rotate);
+        }
+        session.setPlaybackState(b
                 .setState(playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED, 0, 1f)
                 .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
-                        | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SET_SHUFFLE_MODE
+                        | PlaybackStateCompat.ACTION_PLAY_PAUSE | shuffle
                         | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
                 .build());
     }

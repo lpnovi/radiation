@@ -460,16 +460,19 @@ public final class WidgetRenderer {
 
     /**
      * On: accent plus a dot under the glyph (state isn't conveyed by color alone). Off: secondary
-     * text color. Unsupported by the player: faded, and taps are ignored.
+     * text color. Supported but the player doesn't report the state: the off glyph, slightly
+     * softened (never a guessed on/off). Unsupported by the player: faded, and taps are ignored.
      */
     private static void setShuffle(Context context, RemoteViews v, boolean show, int mode, ColorEngine.Theme t,
                                    int[] icons) {
         v.setViewVisibility(R.id.shuffle, show ? View.VISIBLE : View.GONE);
         v.setImageViewResource(R.id.shuffle, icons[mode == Shuffle.ON ? SHUFFLE_ON : SHUFFLE_OFF]);
         v.setInt(R.id.shuffle, "setColorFilter", mode == Shuffle.ON ? t.accent : t.textSecondary);
-        v.setInt(R.id.shuffle, "setImageAlpha", mode == Shuffle.UNSUPPORTED ? 0x5C : 0xFF);
+        v.setInt(R.id.shuffle, "setImageAlpha", mode == Shuffle.UNSUPPORTED ? 0x5C
+                : mode == Shuffle.UNKNOWN ? 0xB3 : 0xFF);
         v.setContentDescription(R.id.shuffle, context.getText(mode == Shuffle.ON ? R.string.shuffle_on
-                : mode == Shuffle.OFF ? R.string.shuffle_off : R.string.shuffle_unsupported));
+                : mode == Shuffle.OFF ? R.string.shuffle_off
+                : mode == Shuffle.UNKNOWN ? R.string.shuffle_unknown : R.string.shuffle_unsupported));
     }
 
     /** Honors "Remove animations" (accessibility). Read globally: our process may have no window. */

@@ -28,11 +28,14 @@ public class RadiationWidgetProvider extends AppWidgetProvider {
             NowPlaying now = WidgetUpdater.latest(bound);
             if (action == MediaSessions.Action.PLAY_PAUSE) {
                 WidgetUpdater.showOptimistic(context, bound, now.withPlaying(!now.playing));
-            } else if (action == MediaSessions.Action.SHUFFLE && now.shuffle != Shuffle.UNSUPPORTED) {
+            } else if (action == MediaSessions.Action.SHUFFLE && (now.shuffle == Shuffle.ON || now.shuffle == Shuffle.OFF)) {
+                // Only a known state is flipped; an unknown one stays neutral (never a guessed on/off).
                 WidgetUpdater.showOptimistic(context, bound,
                         now.withShuffle(now.shuffle == Shuffle.ON ? Shuffle.OFF : Shuffle.ON));
             }
             MediaSessions.perform(context, action, bound);
+            // A player that ignores shuffle sends no update, so check back once it should have answered.
+            if (action == MediaSessions.Action.SHUFFLE) WidgetUpdater.requestIn(context, Shuffle.CONFIRM_MS + 50);
             return;
         }
         super.onReceive(context, intent);

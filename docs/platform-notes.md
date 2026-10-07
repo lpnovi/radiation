@@ -42,7 +42,23 @@ What Android's AppWidget / RemoteViews model allows, and what Radiation does abo
 | Blur ("glass") | Widgets can't blur what's behind them; RemoteViews has no access to blur/RenderEffect and the wallpaper's pixels are private. | Glass is a light haze of the wallpaper's own color, translucent (40% when picked from opaque), with a hairline edge. |
 | Gradients | Dark, shallow gradients span only a few 8-bit levels, so they band; multi-stop gradients show a "knee" at each stop; a gradient layered over the surface antialiases the rounded edge twice. | Album glow is one bitmap (1px per dp, ~140 KB): a single Gaussian falloff from behind the art, dithered with triangular noise of about one level, clipped to the widget's rounded outline (`clipToOutline`). Contrast is checked against both ends. |
 | Border | Tinting a stroke-only shape with a color filter also paints its interior, washing the whole surface. | Two pre-colored 0.6dp hairlines (light/dark), only their opacity set at runtime: ~11% over an opaque surface, ~22% when translucent (where it is the only edge). |
-| Shuffle | The framework media API has no shuffle. It exists in the AndroidX media-compat session protocol (MediaSessionCompat / Media3 players, including Spotify), readable only after an async handshake with the session. | Optional button in the top-right corner, outside the control row, centered over the "next" column. The visible glyph stays 15-20dp; the tap target is 56dp wide and fills the free space above "next" (28-40dp tall), stopping just above the next glyph so taps on it still skip. A compat controller per session records the mode; on = accent plus a dot, off = muted. Players that never complete the handshake show the button faded and taps do nothing. No shuffle without notification access (there's no media key for it). Uses `androidx.media` 1.7 (1.8 deprecates it in favor of Media3, which would add Guava and several MB). |
+| Shuffle | The framework media API has no shuffle. It exists in the AndroidX media-compat session protocol (MediaSessionCompat / Media3 players, including Spotify), readable only after an async handshake with the session. | Optional button in the top-right corner, outside the control row, centered over the "next" column. The visible glyph stays 15-20dp; the tap target is 56dp wide and fills the free space above "next" (28-40dp tall), stopping just above the next glyph so taps on it still skip. On = accent plus a dot, off = muted. See *Shuffle strategies* below. No shuffle without notification access (there's no media key for it). Uses `androidx.media` 1.7 (1.8 deprecates it in favor of Media3, which would add Guava and several MB). |
+
+## Shuffle strategies
+
+Players expose shuffle in different ways, so `Shuffle.choose` (pure, tested) picks one per session from what that session advertises. Capability and state are kept apart.
+
+| Order | Session exposes | Command | State shown |
+|---|---|---|---|
+| 1 | `ACTION_SET_SHUFFLE_MODE` in its playback actions | compat `setShuffleMode` (works before the compat handshake) | Known on/off once the compat mode is readable; otherwise *unknown* (`getShuffleMode() == INVALID` is unknown, not unsupported) |
+| 2 | A playback custom action whose id or name contains "shuffle" (e.g. its notification button) | `sendCustomAction` with that session's own action id | Unknown |
+| 3 | A readable compat mode, without advertising the action (e.g. Spotify) | compat `setShuffleMode` | Known. Caveat: every `MediaSessionCompat` reports NONE by default, even if it has no shuffle, so if the mode hasn't changed 2s after a command the session is treated as unsupported until it reports a change |
+| 4 | Only the deprecated `ACTION_SET_SHUFFLE_MODE_ENABLED` | the support library's legacy custom action | Unknown |
+| 5 | Nothing | none | Unsupported: faded, taps ignored |
+
+Unknown looks like "off", slightly softened, with its own content description; the widget never flips it optimistically, so it never shows a guessed on/off. No accessibility automation, taps, root or private broadcasts are used: only what the session itself publishes.
+
+Diagnostics (debug builds): `adb logcat -s RadiationShuffle` logs, per session, the package, action bitmask, both shuffle actions, compat readiness/mode, custom action ids and names, extras keys (not values) and the chosen strategy, each time one of those changes, plus every command sent. No track metadata is logged. `adb shell dumpsys media_session` shows the same from the system's side. The debug player has `--es shuffle standard|custom|deaf` to exercise strategies 1, 2 and 3.
 
 ## Text
 
