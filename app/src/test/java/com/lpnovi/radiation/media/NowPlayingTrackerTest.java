@@ -46,7 +46,7 @@ public class NowPlayingTrackerTest {
     // --- Bound player without a session ---
 
     private static NowPlaying shown(String pkg, String title) {
-        return new NowPlaying(pkg, title, "Artist", null, null, 0, true, Shuffle.ON, null, true);
+        return new NowPlaying(pkg, title, "Artist", null, null, 0, true, Shuffle.ON, null, true, false);
     }
 
     @Test

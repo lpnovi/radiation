@@ -76,3 +76,23 @@ What Android's AppWidget / RemoteViews model allows, and what Radiation does abo
 | Weight | RemoteViews can't change a typeface at runtime, so the layout has one title view per weight (regular/medium/bold) and two for the artist; the renderer shows one. Weights use the system font (`textFontWeight`, Android 9+; bold below). |
 | Size and lines | Set at runtime (`setTextViewTextSize`, `setMaxLines`). The text block is fitted to the row height (rebalancing sizes, then dropping the artist, then the second line), so text never overlaps controls, shuffle or visualizer. |
 | Long titles | Measured in the system font; a title that doesn't fit shrinks by at most 2.5sp (never below 11sp), keeping the artist at least 1.5sp smaller, then ellipsizes. Controls are a little narrower than tall (44/52dp wide, full-height targets) to give the title more room. |
+
+## Idle mode
+
+| Topic | Radiation |
+|---|---|
+| Opt-in | Per widget, off by default. Off means the original "Nothing playing" state, unchanged. Turning it off keeps the idle settings. |
+| When idle | `IdlePolicy` (pure, tested): playing (incl. buffering/skipping) is never idle; a stopped/closed player is idle after a 4s grace (absorbs track changes and restarts); a paused one after 1 or 5 minutes, or never. The stamp is taken while playing and at the moment playback stops, so the grace counts from the real stop. During the grace the last track is shown paused, so there's no "Nothing playing" flash. |
+| No timers | The next idle switch is one delayed task on the existing render thread (alive while the listener service is bound). No alarms, no polling. |
+| Resume | The track being shown (live paused session, else the remembered last track) marked "Paused · App". Play continues that player's session if it still has one, otherwise opens the player. Bound widgets only ever use their own app; follow-active never borrows another app's empty session. |
+| Last played | Remembered per binding (text in preferences, artwork as a small PNG), written only when the track changes, so it survives process restarts. Idle widgets keep the last artwork's colors. |
+| Clock | `TextClock`, ticked by the launcher once a minute: zero updates from Radiation. Follows the system 12/24-hour setting and locale. Tapping opens the clock app. |
+| Quick Launch | Up to four apps, chosen from launchable apps (`<queries>` MAIN/LAUNCHER). Icons are cached bitmaps; nothing runs until a tap. |
+| Minimal | One resume glyph in the accent, optionally the player's name. |
+
+## Studio preview
+
+| Topic | Radiation |
+|---|---|
+| Inert taps | The preview is rendered non-interactive: no PendingIntents are created at all, and its container (`PreviewFrame`) consumes every touch. It can't open apps, trigger controls or launch another Studio. (Previously, with nothing playing, the body tap was the production "open Studio" intent.) |
+| Playing / Idle | A Studio-only toggle under the preview shows either state without touching playback. |

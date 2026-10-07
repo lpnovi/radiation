@@ -6,6 +6,11 @@
       players expose, so "Bind to player" can list them (see widget/Players.java).
     -->
     <queries>
+        <!-- Quick Launch (idle mode): apps the user can open from the home screen. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <package android:name="com.spotify.music" />
         <intent>
             <action android:name="android.media.browse.MediaBrowserService" />

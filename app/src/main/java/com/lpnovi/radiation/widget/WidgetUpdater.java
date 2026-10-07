@@ -14,6 +14,7 @@ import android.os.SystemClock;
 import androidx.annotation.Nullable;
 
 import com.lpnovi.radiation.config.WidgetConfig;
+import com.lpnovi.radiation.media.LastPlayed;
 import com.lpnovi.radiation.media.MediaSessions;
 import com.lpnovi.radiation.media.NowPlaying;
 import com.lpnovi.radiation.media.NowPlayingTracker;
@@ -43,6 +44,9 @@ public final class WidgetUpdater {
     private static long scheduledAt = Long.MAX_VALUE;
 
     private static final Map<String, NowPlaying> latest = new ConcurrentHashMap<>();
+    /** When each binding was last seen playing (uptime ms), for idle decisions. */
+    private static final Map<String, Long> lastPlayingAt = new ConcurrentHashMap<>();
+    private static final Map<String, Boolean> wasPlaying = new ConcurrentHashMap<>();
     private static volatile Runnable listener;
 
     private WidgetUpdater() {}
@@ -111,7 +115,14 @@ public final class WidgetUpdater {
                 if (tracker == null) trackers.put(k, tracker = new NowPlayingTracker());
                 NowPlayingTracker.Result result = tracker.resolve(context, configs[i].boundPackage);
                 if (result.recheckInMs > 0) schedule(context, result.recheckInMs, null);
-                resolved.put(k, result.nowPlaying);
+                NowPlaying np = result.nowPlaying;
+                // Stamp while playing and at the moment playback stops: renders are event-driven, so
+                // during steady playback nothing refreshes the stamp, and the idle grace must count
+                // from the actual stop, not from the last event before it.
+                if (np.playing || Boolean.TRUE.equals(wasPlaying.get(k))) lastPlayingAt.put(k, SystemClock.uptimeMillis());
+                wasPlaying.put(k, np.playing);
+                LastPlayed.remember(context, configs[i].boundPackage, np);
+                resolved.put(k, np);
             }
             trackers.keySet().retainAll(resolved.keySet());
             latest.keySet().retainAll(resolved.keySet());
@@ -127,18 +138,38 @@ public final class WidgetUpdater {
         }
     }
 
-    /** Renders widgets; with onlyKey set, only those with that binding, showing override. */
+    /**
+     * Renders widgets; with onlyKey set, only those with that binding, showing override.
+     * Also decides idle per widget and schedules one recheck for the nearest pending idle switch
+     * (no alarms, no polling: the render thread lives as long as the listener service).
+     */
     private static void renderAll(Context context, int[] ids, WidgetConfig[] configs,
                                   @Nullable String onlyKey, @Nullable NowPlaying override) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         boolean access = MediaSessions.hasAccess(context);
+        long now = SystemClock.uptimeMillis();
+        long nextSwitch = IdlePolicy.NEVER;
         for (int i = 0; i < ids.length; i++) {
-            String k = key(configs[i].boundPackage);
+            WidgetConfig c = configs[i];
+            String k = key(c.boundPackage);
             if (onlyKey != null && !onlyKey.equals(k)) continue;
-            NowPlaying np = override != null ? override : latest(configs[i].boundPackage);
-            manager.updateAppWidget(ids[i], WidgetRenderer.build(context, ids[i], configs[i], np, access,
-                    WidgetRenderer.widthDp(context, manager, ids[i]), WidgetRenderer.heightDp(context, manager, ids[i])));
+            WidgetRenderer.Frame f = new WidgetRenderer.Frame();
+            f.np = override != null ? override : latest(c.boundPackage);
+            f.lastKnown = LastPlayed.get(context, c.boundPackage);
+            f.hasAccess = access;
+            f.widthDp = WidgetRenderer.widthDp(context, manager, ids[i]);
+            f.heightDp = WidgetRenderer.heightDp(context, manager, ids[i]);
+            if (c.idleEnabled) {
+                Long seen = lastPlayingAt.get(k);
+                long last = seen == null ? IdlePolicy.UNKNOWN : seen;
+                long delay = IdlePolicy.pauseDelayMs(c.pauseIdle);
+                f.idle = IdlePolicy.isIdle(f.np.playing, f.np.paused, last, now, delay);
+                long wait = IdlePolicy.untilIdle(f.np.playing, f.np.paused, last, now, delay);
+                if (wait != IdlePolicy.NEVER && (nextSwitch == IdlePolicy.NEVER || wait < nextSwitch)) nextSwitch = wait;
+            }
+            manager.updateAppWidget(ids[i], WidgetRenderer.build(context, ids[i], c, f));
         }
+        if (nextSwitch != IdlePolicy.NEVER) schedule(context, nextSwitch + 50, null);
     }
 
     /**

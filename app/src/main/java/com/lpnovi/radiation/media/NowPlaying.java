@@ -11,7 +11,7 @@ import com.lpnovi.radiation.color.ColorEngine;
 public final class NowPlaying {
 
     public static final NowPlaying NOTHING = new NowPlaying(null, null, null, null, null,
-            ColorEngine.NONE, false, Shuffle.UNSUPPORTED, null, false);
+            ColorEngine.NONE, false, Shuffle.UNSUPPORTED, null, false, false);
 
     /** Package of the session shown (or of the bound player while it has none); null when nothing. */
     @Nullable public final String packageName;
@@ -32,10 +32,12 @@ public final class NowPlaying {
      * last-known track of a player whose session has gone. Controls then open the player instead.
      */
     public final boolean hasSession;
+    /** A session exists and is paused (as opposed to stopped/none): idle only after the pause delay. */
+    public final boolean paused;
 
     NowPlaying(@Nullable String packageName, @Nullable CharSequence title, @Nullable CharSequence artist,
                @Nullable Bitmap art, @Nullable String artKey, int seed, boolean playing, int shuffle,
-               @Nullable PendingIntent sessionActivity, boolean hasSession) {
+               @Nullable PendingIntent sessionActivity, boolean hasSession, boolean paused) {
         this.packageName = packageName;
         this.title = title;
         this.artist = artist;
@@ -46,45 +48,47 @@ public final class NowPlaying {
         this.shuffle = shuffle;
         this.sessionActivity = sessionActivity;
         this.hasSession = hasSession;
+        this.paused = paused;
     }
 
     /** A bound player with no session and nothing remembered: the widget names the player instead. */
-    static NowPlaying idle(String packageName) {
+    public static NowPlaying idle(String packageName) {
         return new NowPlaying(packageName, null, null, null, null, ColorEngine.NONE, false,
-                Shuffle.UNSUPPORTED, null, false);
+                Shuffle.UNSUPPORTED, null, false, false);
     }
 
     /** Studio preview content when nothing real is available, e.g. to judge long titles. */
-    public static NowPlaying sample(CharSequence title, CharSequence artist, @Nullable Bitmap art, int seed) {
-        return new NowPlaying("sample", title, artist, art, "sample", seed, true, Shuffle.OFF, null, true);
+    public static NowPlaying sample(String packageName, CharSequence title, CharSequence artist,
+                                    @Nullable Bitmap art, int seed) {
+        return new NowPlaying(packageName, title, artist, art, "sample", seed, true, Shuffle.OFF, null, true, false);
     }
 
     NowPlaying withArtOf(NowPlaying other) {
         return new NowPlaying(packageName, title, artist, other.art, other.artKey, other.seed, playing, shuffle,
-                sessionActivity, hasSession);
+                sessionActivity, hasSession, paused);
     }
 
     /** For optimistic rendering of a tap. */
     public NowPlaying withPlaying(boolean playing) {
         return new NowPlaying(packageName, title, artist, art, artKey, seed, playing, shuffle, sessionActivity,
-                hasSession);
+                hasSession, hasSession && !playing);
     }
 
     /** For optimistic rendering of a tap. */
     public NowPlaying withShuffle(int shuffle) {
         return new NowPlaying(packageName, title, artist, art, artKey, seed, playing, shuffle, sessionActivity,
-                hasSession);
+                hasSession, paused);
     }
 
     /** Last-known track of a bound player whose session went away: shown paused, not controllable. */
     NowPlaying asLastKnown() {
         return new NowPlaying(packageName, title, artist, art, artKey, seed, false, Shuffle.UNSUPPORTED,
-                sessionActivity, false);
+                sessionActivity, false, false);
     }
 
     /** Previous track's visuals with live playback state/intent: used while waiting for new artwork. */
     NowPlaying heldWithStateOf(NowPlaying live) {
         return new NowPlaying(packageName, title, artist, art, artKey, seed, live.playing, live.shuffle,
-                live.sessionActivity, live.hasSession);
+                live.sessionActivity, live.hasSession, live.paused);
     }
 }

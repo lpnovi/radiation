@@ -6,6 +6,7 @@ import android.app.WallpaperManager;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -15,10 +16,14 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.AlarmClock;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.text.format.DateFormat;
+import android.util.LruCache;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.RemoteViews;
@@ -34,6 +39,8 @@ import com.lpnovi.radiation.media.MediaSessions;
 import com.lpnovi.radiation.media.NowPlaying;
 import com.lpnovi.radiation.media.Shuffle;
 
+import java.util.Locale;
+
 /**
  * (NowPlaying, per-widget config, cell height) -> RemoteViews. Shared by the home-screen widget
  * and the studio preview. Sets every dynamic property on every call, because hosts may reapply
@@ -46,11 +53,54 @@ public final class WidgetRenderer {
 
     private WidgetRenderer() {}
 
-    public static RemoteViews build(Context context, int appWidgetId, WidgetConfig config,
-                                    NowPlaying np, boolean hasAccess, float widthDp, float heightDp) {
+    /** Everything one render needs besides the widget's config. */
+    public static final class Frame {
+        /** What the widget's player (binding) shows right now. */
+        public NowPlaying np = NowPlaying.NOTHING;
+        /** The binding's last real track, for idle Resume/Minimal and idle theming. */
+        public NowPlaying lastKnown = NowPlaying.NOTHING;
+        /** Idle by {@link IdlePolicy}; only matters when the widget has Idle mode on. */
+        public boolean idle;
+        public boolean hasAccess;
+        public float widthDp = DEFAULT_WIDTH_DP, heightDp = DEFAULT_HEIGHT_DP;
+        /**
+         * False for the Studio preview: no PendingIntents are created at all, so the preview can't
+         * open apps, trigger controls or touch the production widget's intents.
+         */
+        public boolean interactive = true;
+    }
+
+    public static RemoteViews build(Context context, int appWidgetId, WidgetConfig config, Frame f) {
+        boolean hasAccess = f.hasAccess;
+        float widthDp = f.widthDp, heightDp = f.heightDp;
+        // Idle mode is opt-in per widget; with it off this is always null and nothing below changes.
+        WidgetConfig.IdleContent idleContent = config.idleEnabled && f.idle ? config.idleContent : null;
+        boolean resume = idleContent == WidgetConfig.IdleContent.RESUME;
+        boolean otherIdle = idleContent != null && !resume;
+        // The player idle content refers to: the bound app, else the current/last-known one. A bound
+        // widget's last-known track is always from its own app, so Resume never offers another.
+        // Following the active player, that's the app of the track being shown: the live session if it
+        // has a track, otherwise the last one played (not some other app's empty session).
+        String idlePlayer = config.boundPackage != null ? config.boundPackage
+                : !TextUtils.isEmpty(f.np.title) ? f.np.packageName
+                : f.lastKnown.packageName != null ? f.lastKnown.packageName : f.np.packageName;
+        // Continue the session only if it's that same player's; otherwise open the player.
+        boolean resumeViaSession = f.np.hasSession && java.util.Objects.equals(f.np.packageName, idlePlayer);
+        NowPlaying np = f.np;
+        // Idle mode on, session just gone but not idle yet (the short grace): keep the last track,
+        // shown paused, so the hand-off is song -> idle content without a "Nothing playing" flash.
+        if (config.idleEnabled && idleContent == null && TextUtils.isEmpty(np.title)
+                && !TextUtils.isEmpty(f.lastKnown.title)) {
+            np = f.lastKnown;
+        }
+        if (resume) {
+            if (!config.resumeShowTrack) np = idlePlayer == null ? NowPlaying.NOTHING : NowPlaying.idle(idlePlayer);
+            else if (TextUtils.isEmpty(np.title)) np = f.lastKnown;
+        }
         RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_radiation);
         ColorEngine.Inputs in = new ColorEngine.Inputs();
-        in.seed = np.seed;
+        // Idle widgets keep the last artwork's colors, so Album Glow/tint stay alive on the clock etc.
+        in.seed = np.seed != ColorEngine.NONE ? np.seed : idleContent != null ? f.lastKnown.seed : ColorEngine.NONE;
         in.wallpaper = wallpaperColor(context);
         in.myBg = context.getColor(R.color.my_bg);
         in.myAccent = context.getColor(R.color.my_control);
@@ -110,9 +160,9 @@ public final class WidgetRenderer {
         // Text content. A bound player with nothing to show names itself rather than borrowing
         // another app's metadata.
         boolean bound = config.boundPackage != null;
-        boolean idle = TextUtils.isEmpty(np.title);
+        boolean noTrack = TextUtils.isEmpty(np.title);
         CharSequence title, artist;
-        if (!idle) {
+        if (!noTrack) {
             title = np.title;
             artist = np.artist == null ? "" : np.artist;
         } else if (!hasAccess) {
@@ -126,10 +176,20 @@ public final class WidgetRenderer {
             title = context.getText(R.string.nothing_playing);
             artist = context.getText(R.string.app_name);
         }
+        if (resume && np.packageName != null && hasAccess) {
+            // Honest idle state: the track (or just the player) marked paused, never shown as playing.
+            CharSequence app = Players.label(context, np.packageName, bound ? config.boundLabel : null);
+            if (noTrack) {
+                title = app;
+                artist = context.getText(R.string.idle_paused);
+            } else {
+                artist = context.getString(R.string.idle_paused_on, app);
+            }
+        }
 
         // Typography: fit the block to the row height, then let long titles shrink a little.
         float fontScale = context.getResources().getConfiguration().fontScale;
-        boolean forceArtist = idle && !hasAccess; // the "tap to connect" hint always shows
+        boolean forceArtist = noTrack && !hasAccess; // the "tap to connect" hint always shows
         Typography ty = Typography.fitHeight(config.showTitle, config.titleSize, config.titleLines,
                 config.showArtist || forceArtist, config.artistSize, heightDp - liftDp - TEXT_BREATHING_DP, fontScale);
         float titleSp = ty.titleSp;
@@ -182,12 +242,13 @@ public final class WidgetRenderer {
         v.setInt(R.id.previous, "setColorFilter", t.accent);
         v.setInt(R.id.next, "setColorFilter", t.accent);
         v.setInt(R.id.play_pause, "setColorFilter", t.accent);
-        v.setViewVisibility(R.id.previous, config.showPrevious ? View.VISIBLE : View.GONE);
-        v.setViewVisibility(R.id.next, config.showNext ? View.VISIBLE : View.GONE);
+        // In idle Resume only play remains: skipping or shuffling a paused, remembered track means nothing.
+        v.setViewVisibility(R.id.previous, config.showPrevious && !resume ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.next, config.showNext && !resume ? View.VISIBLE : View.GONE);
         int[] icons = ICONS[config.iconStyle.ordinal()];
         v.setImageViewResource(R.id.previous, icons[PREVIOUS]);
         v.setImageViewResource(R.id.next, icons[NEXT]);
-        setShuffle(context, v, config.showShuffle, np.shuffle, t, icons);
+        setShuffle(context, v, config.showShuffle && idleContent == null, np.shuffle, t, icons);
 
         // Visualizer: the song's accent, softened so it stays an accent rather than a feature.
         int vizColor = (t.accent & 0x00FFFFFF) | VIZ_ALPHA << 24;
@@ -200,7 +261,7 @@ public final class WidgetRenderer {
         v.setInt(R.id.viz_static, "setImageAlpha", VIZ_ALPHA);
         v.setImageViewResource(R.id.viz_static, config.visualizer == WidgetConfig.Visualizer.WAVE
                 ? R.drawable.viz_wave_0 : R.drawable.viz_bars_0);
-        setPlaying(context, v, np.playing && !idle, config.visualizer, icons);
+        setPlaying(context, v, np.playing && !noTrack && idleContent == null, config.visualizer, icons);
 
         // A bound player that has no session can't be controlled: play opens the player (the one
         // reliable way to start it from a widget), skip/shuffle rest dimmed. Never a media key,
@@ -210,18 +271,131 @@ public final class WidgetRenderer {
         v.setInt(R.id.previous, "setImageAlpha", controlAlpha);
         v.setInt(R.id.next, "setImageAlpha", controlAlpha);
         if (dormant) v.setInt(R.id.shuffle, "setImageAlpha", DORMANT_ALPHA);
+        v.setViewVisibility(R.id.play_pause, resume && idlePlayer == null ? View.GONE : View.VISIBLE);
+
+        // Idle content other than Resume replaces the media row; the surface, colors and corners stay.
+        v.setViewVisibility(R.id.row, otherIdle ? View.GONE : View.VISIBLE);
+        v.setViewVisibility(R.id.idle_clock, idleContent == WidgetConfig.IdleContent.CLOCK ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.idle_launch, idleContent == WidgetConfig.IdleContent.QUICK_LAUNCH ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.idle_minimal, idleContent == WidgetConfig.IdleContent.MINIMAL ? View.VISIBLE : View.GONE);
+        if (idleContent == WidgetConfig.IdleContent.CLOCK) renderClock(context, v, config, t, heightDp, liftDp);
+        if (idleContent == WidgetConfig.IdleContent.QUICK_LAUNCH) renderLaunch(context, v, config, t, ripple);
+        if (idleContent == WidgetConfig.IdleContent.MINIMAL) renderMinimal(context, v, config, t, icons, ripple, idlePlayer);
+
+        if (!f.interactive) return v; // Studio preview: no PendingIntents at all, so taps do nothing.
+
+        // Resume (idle): play continues the paused session if there is one, otherwise opens the player.
+        PendingIntent resumeAction = idlePlayer == null ? null : resumeViaSession
+                ? control(context, appWidgetId, MediaSessions.Action.PLAY_PAUSE)
+                : launchPlayer(context, appWidgetId, idlePlayer);
         PendingIntent launchBound = dormant ? launchPlayer(context, appWidgetId, config.boundPackage) : null;
         v.setOnClickPendingIntent(R.id.shuffle, dormant ? null : control(context, appWidgetId, MediaSessions.Action.SHUFFLE));
         v.setOnClickPendingIntent(R.id.previous, dormant ? null : control(context, appWidgetId, MediaSessions.Action.PREVIOUS));
-        v.setOnClickPendingIntent(R.id.play_pause, dormant ? launchBound
+        v.setOnClickPendingIntent(R.id.play_pause, resume ? resumeAction : dormant ? launchBound
                 : control(context, appWidgetId, MediaSessions.Action.PLAY_PAUSE));
         v.setOnClickPendingIntent(R.id.next, dormant ? null : control(context, appWidgetId, MediaSessions.Action.NEXT));
+        v.setOnClickPendingIntent(R.id.min_play, resumeAction);
 
-        PendingIntent open = openIntent(context, appWidgetId, config, np, hasAccess);
+        PendingIntent open;
+        if (idleContent == WidgetConfig.IdleContent.CLOCK) {
+            open = activity(context, appWidgetId, new Intent(AlarmClock.ACTION_SHOW_ALARMS));
+        } else if (idleContent == WidgetConfig.IdleContent.QUICK_LAUNCH) {
+            open = null; // only the shortcuts launch anything
+            for (int i = 0; i < LAUNCH_SLOTS.length; i++) {
+                String pkg = config.shortcuts[i];
+                Intent launch = pkg == null ? null : context.getPackageManager().getLaunchIntentForPackage(pkg);
+                v.setOnClickPendingIntent(LAUNCH_SLOTS[i], launch == null ? null : activity(context, appWidgetId, launch));
+            }
+        } else if (idleContent != null) {
+            open = idlePlayer == null ? null : launchPlayer(context, appWidgetId, idlePlayer);
+            if (resume && resumeViaSession && f.np.sessionActivity != null) open = f.np.sessionActivity;
+        } else {
+            open = openIntent(context, appWidgetId, config, np, hasAccess);
+        }
         v.setOnClickPendingIntent(android.R.id.background, open);
         v.setOnClickPendingIntent(R.id.art_box, open);
         v.setOnClickPendingIntent(R.id.info, open);
         return v;
+    }
+
+    // --- Idle content ---
+
+    private static final int[] LAUNCH_SLOTS = {R.id.launch_0, R.id.launch_1, R.id.launch_2, R.id.launch_3};
+    private static final float LAUNCH_ICON_DP = 40;
+    /** App icons for Quick Launch, so idle re-renders don't reload them. */
+    private static final LruCache<String, Bitmap> appIcons = new LruCache<>(8);
+
+    /**
+     * Clock: TextClock is ticked by the launcher itself once a minute, so Radiation sends no
+     * updates at all. Formats follow the system 12/24-hour setting and the user's locale.
+     */
+    private static void renderClock(Context context, RemoteViews v, WidgetConfig config, ColorEngine.Theme t,
+                                    float heightDp, float liftDp) {
+        Locale locale = Locale.getDefault();
+        v.setCharSequence(R.id.clock_time, "setFormat12Hour", "h:mm");
+        v.setCharSequence(R.id.clock_time, "setFormat24Hour", "HH:mm");
+        String weekday = DateFormat.getBestDateTimePattern(locale, "EEEE");
+        String date = DateFormat.getBestDateTimePattern(locale, "MMMMd");
+        for (String method : new String[]{"setFormat12Hour", "setFormat24Hour"}) {
+            v.setCharSequence(R.id.clock_weekday, method, weekday);
+            v.setCharSequence(R.id.clock_date, method, date);
+        }
+        float fontScale = context.getResources().getConfiguration().fontScale;
+        float timeSp = Math.max(24, Math.min(46, (heightDp - liftDp) * 0.46f / fontScale));
+        v.setTextViewTextSize(R.id.clock_time, TypedValue.COMPLEX_UNIT_SP, timeSp);
+        v.setTextColor(R.id.clock_time, t.text);
+        v.setTextColor(R.id.clock_weekday, t.accent);
+        v.setTextColor(R.id.clock_date, t.textSecondary);
+        v.setViewVisibility(R.id.clock_date_box, config.clockShowDate ? View.VISIBLE : View.GONE);
+    }
+
+    /** Quick Launch: up to four app icons; nothing runs until one is tapped. */
+    private static void renderLaunch(Context context, RemoteViews v, WidgetConfig config, ColorEngine.Theme t,
+                                     int ripple) {
+        int shown = 0;
+        int iconPx = px(context, LAUNCH_ICON_DP);
+        for (int i = 0; i < LAUNCH_SLOTS.length; i++) {
+            String pkg = config.shortcuts[i];
+            Bitmap icon = pkg == null ? null : appIcon(context, pkg, iconPx);
+            v.setViewVisibility(LAUNCH_SLOTS[i], icon != null ? View.VISIBLE : View.GONE);
+            v.setInt(LAUNCH_SLOTS[i], "setBackgroundResource", ripple);
+            if (icon != null) {
+                v.setImageViewBitmap(LAUNCH_SLOTS[i], icon);
+                v.setContentDescription(LAUNCH_SLOTS[i], Players.label(context, pkg, null));
+                shown++;
+            }
+        }
+        v.setViewVisibility(R.id.launch_hint, shown == 0 ? View.VISIBLE : View.GONE);
+        v.setTextColor(R.id.launch_hint, t.textSecondary);
+    }
+
+    /** Minimal: one resume glyph in the accent, optionally naming the player. */
+    private static void renderMinimal(Context context, RemoteViews v, WidgetConfig config, ColorEngine.Theme t,
+                                      int[] icons, int ripple, @Nullable String player) {
+        v.setImageViewResource(R.id.min_play, icons[PLAY]);
+        v.setInt(R.id.min_play, "setColorFilter", t.accent);
+        v.setInt(R.id.min_play, "setBackgroundResource", ripple);
+        boolean name = config.minimalShowPlayer && player != null;
+        v.setViewVisibility(R.id.min_label, name ? View.VISIBLE : View.GONE);
+        if (name) v.setTextViewText(R.id.min_label, Players.label(context, player, config.boundLabel));
+        v.setTextColor(R.id.min_label, t.textSecondary);
+    }
+
+    @Nullable
+    private static Bitmap appIcon(Context context, String pkg, int px) {
+        String key = pkg + "@" + px;
+        Bitmap cached = appIcons.get(key);
+        if (cached != null) return cached;
+        try {
+            Drawable d = context.getPackageManager().getApplicationIcon(pkg);
+            Bitmap b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888);
+            d.setBounds(0, 0, px, px);
+            d.draw(new Canvas(b));
+            appIcons.put(key, b);
+            return b;
+        } catch (PackageManager.NameNotFoundException e) {
+            return null; // uninstalled since it was chosen: the slot just disappears
+        }
     }
 
     /** Title view per {@link WidgetConfig.Weight} (RemoteViews can't change a typeface at runtime). */

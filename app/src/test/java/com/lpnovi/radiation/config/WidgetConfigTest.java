@@ -58,4 +58,15 @@ public class WidgetConfigTest {
         assertEquals(WidgetConfig.Visualizer.WAVE,
                 WidgetConfig.parse(WidgetConfig.Visualizer.class, "WAVE", WidgetConfig.Visualizer.BARS));
     }
+
+    /** Existing widgets get Idle mode off, so their "Nothing playing" state is unchanged. */
+    @Test
+    public void idleModeIsOffByDefaultWithRestrainedDefaults() {
+        WidgetConfig c = new WidgetConfig();
+        assertFalse(c.idleEnabled);
+        assertEquals(WidgetConfig.IdleContent.CLOCK, c.idleContent);
+        assertEquals(WidgetConfig.PauseIdle.AFTER_1_MIN, c.pauseIdle);
+        assertEquals(WidgetConfig.MAX_SHORTCUTS, c.shortcuts.length);
+        for (String s : c.shortcuts) assertEquals(null, s);
+    }
 }

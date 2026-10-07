@@ -109,4 +109,35 @@
     <string name="sample_title">Locked Away (feat. Adam Levine)</string>
     <string name="sample_artist">R. City, Adam Levine</string>
     <string name="player_unavailable">%1$s (not installed)</string>
+
+    <!-- Idle mode -->
+    <string name="idle_paused">Paused</string>
+    <string name="idle_paused_on">Paused · %1$s</string>
+    <string name="idle_resume">Resume</string>
+    <string name="launch_hint">Choose apps in Radiation</string>
+    <string name="section_idle">Idle</string>
+    <string name="idle_mode">Idle mode</string>
+    <string name="hint_idle_off">When nothing is playing, show something useful instead of “Nothing playing”. Music always brings the player back.</string>
+    <string name="idle_content">Idle content</string>
+    <string name="idle_resume_chip">Resume</string>
+    <string name="idle_launch_chip">Quick Launch</string>
+    <string name="idle_clock_chip">Clock</string>
+    <string name="idle_minimal_chip">Minimal</string>
+    <string name="hint_idle_resume">The last track, marked paused, with play to pick up where you left off.</string>
+    <string name="hint_idle_launch">Up to four apps, one tap away.</string>
+    <string name="hint_idle_clock">The time, drawn by your launcher: no updates from Radiation, no battery cost.</string>
+    <string name="hint_idle_minimal">A single play button, nothing else.</string>
+    <string name="resume_show_track">Show last track</string>
+    <string name="clock_show_date">Show date</string>
+    <string name="minimal_show_player">Show player name</string>
+    <string name="shortcut_add">Add app</string>
+    <string name="shortcut_slot">Shortcut %1$d</string>
+    <string name="shortcut_none">None</string>
+    <string name="pick_app">Choose an app</string>
+    <string name="pause_idle">Go idle after pausing for</string>
+    <string name="pause_1_min">1 min</string>
+    <string name="pause_5_min">5 min</string>
+    <string name="pause_never">Never</string>
+    <string name="preview_playing">Playing</string>
+    <string name="preview_idle">Idle</string>
 </resources>

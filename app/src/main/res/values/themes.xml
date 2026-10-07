@@ -96,6 +96,14 @@
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
+    <!-- Small segmented control for the preview state, sized to its labels. -->
+    <style name="Studio.Segment.Compact" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minWidth">96dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
     <style name="Studio.Switch" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
@@ -134,6 +142,29 @@
     </style>
     <style name="Widget.Title.Bold">
         <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Widget.ClockTime.Base" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="android:textSize">40sp</item>
+    </style>
+
+    <!-- Large clock numerals; values-v28 adds a light weight of the system font. -->
+    <style name="Widget.ClockTime" parent="Widget.ClockTime.Base" />
+
+    <style name="Widget.LaunchSlot" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:maxWidth">72dp</item>
+        <item name="android:background">@drawable/ripple_on_dark</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:visibility">gone</item>
     </style>
 
     <style name="Widget.Artist" parent="">

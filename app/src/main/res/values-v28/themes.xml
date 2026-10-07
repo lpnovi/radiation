@@ -30,4 +30,9 @@
         <item name="android:textStyle">normal</item>
         <item name="android:textFontWeight">500</item>
     </style>
+
+    <!-- Widget clock: a light weight of the system font for the large numerals. -->
+    <style name="Widget.ClockTime" parent="Widget.ClockTime.Base">
+        <item name="android:textFontWeight">300</item>
+    </style>
 </resources>

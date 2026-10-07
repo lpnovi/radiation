@@ -71,6 +71,11 @@ public final class MediaSessions {
         return first;
     }
 
+    /** Paused, as opposed to stopped/none/error: a pause is likely to be resumed soon. */
+    public static boolean isPaused(@Nullable MediaController controller) {
+        return controller != null && stateOf(controller) == PlaybackState.STATE_PAUSED;
+    }
+
     public static boolean isPlaying(@Nullable MediaController controller) {
         return controller != null && isActiveState(stateOf(controller));
     }

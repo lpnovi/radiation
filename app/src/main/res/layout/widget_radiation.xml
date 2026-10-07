@@ -197,6 +197,115 @@
     </LinearLayout>
 
     <!--
+      Idle content (Idle mode on, nothing playing). Shares the surface, colors and corners above; only
+      the media row is swapped out. Resume reuses the media row itself.
+    -->
+
+    <!-- Clock: TextClock ticks inside the launcher, so no updates are needed from Radiation. -->
+    <LinearLayout
+        android:id="@+id/idle_clock"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:visibility="gone">
+
+        <TextClock
+            android:id="@+id/clock_time"
+            style="@style/Widget.ClockTime" />
+
+        <LinearLayout
+            android:id="@+id/clock_date_box"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="18dp"
+            android:orientation="vertical">
+
+            <TextClock
+                android:id="@+id/clock_weekday"
+                style="@style/Widget.Title.Medium"
+                android:layout_width="wrap_content"
+                android:textSize="13sp" />
+
+            <TextClock
+                android:id="@+id/clock_date"
+                style="@style/Widget.Artist"
+                android:layout_width="wrap_content"
+                android:layout_marginTop="3dp"
+                android:textSize="15sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Quick Launch: up to four app icons, evenly spaced. -->
+    <LinearLayout
+        android:id="@+id/idle_launch"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:visibility="gone">
+
+        <ImageButton
+            android:id="@+id/launch_0"
+            style="@style/Widget.LaunchSlot"
+            android:contentDescription="@string/idle_launch_chip" />
+
+        <ImageButton
+            android:id="@+id/launch_1"
+            style="@style/Widget.LaunchSlot"
+            android:contentDescription="@string/idle_launch_chip" />
+
+        <ImageButton
+            android:id="@+id/launch_2"
+            style="@style/Widget.LaunchSlot"
+            android:contentDescription="@string/idle_launch_chip" />
+
+        <ImageButton
+            android:id="@+id/launch_3"
+            style="@style/Widget.LaunchSlot"
+            android:contentDescription="@string/idle_launch_chip" />
+
+        <TextView
+            android:id="@+id/launch_hint"
+            style="@style/Widget.Artist"
+            android:layout_width="wrap_content"
+            android:layout_marginTop="0dp"
+            android:text="@string/launch_hint"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Minimal: a single resume glyph, optionally naming the player. -->
+    <LinearLayout
+        android:id="@+id/idle_minimal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <ImageButton
+            android:id="@+id/min_play"
+            android:layout_width="@dimen/play_size"
+            android:layout_height="@dimen/play_size"
+            android:background="@drawable/ripple_on_dark"
+            android:contentDescription="@string/idle_resume"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_play_state"
+            android:tint="#FFFFFFFF" />
+
+        <TextView
+            android:id="@+id/min_label"
+            style="@style/Widget.Artist"
+            android:layout_width="wrap_content"
+            android:layout_marginStart="0dp"
+            android:layout_marginTop="0dp"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <!--
       Optional shuffle: a secondary control in the top-right corner, in the column of the rightmost
       transport control, so it never takes width from the title. Its target fills the free space above
       that control (sized at runtime on Android 12+); the glyph stays small.

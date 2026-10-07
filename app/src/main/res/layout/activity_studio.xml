@@ -37,13 +37,35 @@
         android:layout_marginBottom="8dp"
         app:cardCornerRadius="28dp">
 
-        <FrameLayout
+        <!-- Touches stop here: the preview is rendered without PendingIntents and is inert. -->
+        <com.lpnovi.radiation.PreviewFrame
             android:id="@+id/preview"
             android:layout_width="match_parent"
             android:layout_height="80dp"
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="24dp" />
     </com.google.android.material.card.MaterialCardView>
+
+    <!-- Studio-only: which state the preview shows. Never touches real playback. -->
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/preview_state"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="4dp"
+        app:selectionRequired="true"
+        app:singleSelection="true">
+
+        <Button
+            android:id="@+id/preview_playing"
+            style="@style/Studio.Segment.Compact"
+            android:text="@string/preview_playing" />
+
+        <Button
+            android:id="@+id/preview_idle"
+            style="@style/Studio.Segment.Compact"
+            android:text="@string/preview_idle" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll"
@@ -249,6 +271,132 @@
                                 style="@style/Studio.Segment"
                                 android:text="@string/tap_nothing" />
                         </com.google.android.material.button.MaterialButtonToggleGroup>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Idle -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Studio.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            style="@style/Studio.Section"
+                            android:layout_marginBottom="0dp"
+                            android:text="@string/section_idle" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/idle_enabled"
+                            style="@style/Studio.Switch"
+                            android:text="@string/idle_mode" />
+
+                        <TextView
+                            android:id="@+id/idle_off_hint"
+                            style="@style/Studio.Hint"
+                            android:layout_marginTop="0dp"
+                            android:text="@string/hint_idle_off" />
+
+                        <!-- Shown only with Idle mode on; settings kept when it's turned off. -->
+                        <LinearLayout
+                            android:id="@+id/idle_options"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/Studio.Label"
+                                android:layout_marginTop="4dp"
+                                android:text="@string/idle_content" />
+
+                            <com.google.android.material.chip.ChipGroup
+                                android:id="@+id/idle_group"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:chipSpacingVertical="0dp"
+                                app:selectionRequired="true"
+                                app:singleSelection="true">
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/idle_resume_choice"
+                                    style="@style/Studio.Choice"
+                                    android:text="@string/idle_resume_chip" />
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/idle_launch_choice"
+                                    style="@style/Studio.Choice"
+                                    android:text="@string/idle_launch_chip" />
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/idle_clock_choice"
+                                    style="@style/Studio.Choice"
+                                    android:text="@string/idle_clock_chip" />
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/idle_minimal_choice"
+                                    style="@style/Studio.Choice"
+                                    android:text="@string/idle_minimal_chip" />
+                            </com.google.android.material.chip.ChipGroup>
+
+                            <TextView
+                                android:id="@+id/idle_hint"
+                                style="@style/Studio.Hint" />
+
+                            <!-- Per-content options: only the selected content's are shown. -->
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/resume_show_track"
+                                style="@style/Studio.Switch"
+                                android:text="@string/resume_show_track" />
+
+                            <LinearLayout
+                                android:id="@+id/shortcut_slots"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/clock_show_date"
+                                style="@style/Studio.Switch"
+                                android:text="@string/clock_show_date" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/minimal_show_player"
+                                style="@style/Studio.Switch"
+                                android:text="@string/minimal_show_player" />
+
+                            <TextView
+                                style="@style/Studio.Label"
+                                android:text="@string/pause_idle" />
+
+                            <com.google.android.material.button.MaterialButtonToggleGroup
+                                android:id="@+id/pause_idle_group"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:selectionRequired="true"
+                                app:singleSelection="true">
+
+                                <Button
+                                    android:id="@+id/pause_1"
+                                    style="@style/Studio.Segment"
+                                    android:text="@string/pause_1_min" />
+
+                                <Button
+                                    android:id="@+id/pause_5"
+                                    style="@style/Studio.Segment"
+                                    android:text="@string/pause_5_min" />
+
+                                <Button
+                                    android:id="@+id/pause_never"
+                                    style="@style/Studio.Segment"
+                                    android:text="@string/pause_never" />
+                            </com.google.android.material.button.MaterialButtonToggleGroup>
+                        </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

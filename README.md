@@ -12,6 +12,7 @@ A clean, highly customizable **4×1 media widget** for Android.
 - Backgrounds: album tint (default), album glow, AMOLED, Material You, glass, or a custom color; opacity that never fades text or controls; optional hairline border.
 - Optional subtle bars or wave along the bottom while music plays, drawn by the launcher itself (decorative; see the platform notes on why not audio-reactive).
 - Optional corner shuffle button for players that support it (Spotify included).
+- Optional per-widget Idle mode: when nothing plays, show Resume, Quick Launch, a Clock or a Minimal view.
 - Uses your phone's system font, with adjustable title/artist size, weight and 1-2 title lines. Toggle art (rounded or circle), artist, previous, next, shuffle. Tap opens the current player (or always Spotify, or nothing).
 
 ## Privacy

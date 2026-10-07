@@ -43,6 +43,12 @@ public final class WidgetConfig {
 
     public enum Weight { REGULAR, MEDIUM, BOLD }
 
+    /** What an idle widget shows (Idle mode on, nothing playing). Add modes at the end. */
+    public enum IdleContent { RESUME, QUICK_LAUNCH, CLOCK, MINIMAL }
+
+    /** When a paused player counts as idle. Stopped/closed players are idle after a short grace. */
+    public enum PauseIdle { AFTER_1_MIN, AFTER_5_MIN, NEVER }
+
     public Background background = Background.ALBUM_TINT;
     public int customColor = 0xFF1C1B1F;
     /** Background layer only, 0 (transparent) – 255 (opaque). Never applied to foreground. */
@@ -73,6 +79,18 @@ public final class WidgetConfig {
     public boolean fitTitle = true;
     public float artistSize = 13f;
     public Weight artistWeight = Weight.REGULAR;
+
+    // Idle mode. Off by default: existing widgets keep the plain "Nothing playing" state.
+    // Turning it off keeps every idle setting below, so turning it on again restores them.
+    public boolean idleEnabled = false;
+    public IdleContent idleContent = IdleContent.CLOCK;
+    public PauseIdle pauseIdle = PauseIdle.AFTER_1_MIN;
+    public boolean resumeShowTrack = true;
+    public boolean clockShowDate = true;
+    public boolean minimalShowPlayer = true;
+    /** Quick Launch apps (package names), at most {@link #MAX_SHORTCUTS}; empty slots are null. */
+    public String[] shortcuts = new String[MAX_SHORTCUTS];
+    public static final int MAX_SHORTCUTS = 4;
 
     /** 0% = transparent background, 100% = fully opaque background. */
     public static int alphaFromPercent(int percent) {
@@ -122,6 +140,13 @@ public final class WidgetConfig {
         c.fitTitle = p.getBoolean(k + "fitTitle", c.fitTitle);
         c.artistSize = p.getFloat(k + "artistSize", c.artistSize);
         c.artistWeight = parse(Weight.class, p.getString(k + "artistWeight", null), c.artistWeight);
+        c.idleEnabled = p.getBoolean(k + "idleEnabled", c.idleEnabled);
+        c.idleContent = parse(IdleContent.class, p.getString(k + "idleContent", null), c.idleContent);
+        c.pauseIdle = parse(PauseIdle.class, p.getString(k + "pauseIdle", null), c.pauseIdle);
+        c.resumeShowTrack = p.getBoolean(k + "resumeShowTrack", c.resumeShowTrack);
+        c.clockShowDate = p.getBoolean(k + "clockShowDate", c.clockShowDate);
+        c.minimalShowPlayer = p.getBoolean(k + "minimalShowPlayer", c.minimalShowPlayer);
+        for (int i = 0; i < MAX_SHORTCUTS; i++) c.shortcuts[i] = p.getString(k + "shortcut" + i, null);
         return c;
     }
 
@@ -153,6 +178,16 @@ public final class WidgetConfig {
                 .putBoolean(k + "fitTitle", fitTitle)
                 .putFloat(k + "artistSize", artistSize)
                 .putString(k + "artistWeight", artistWeight.name())
+                .putBoolean(k + "idleEnabled", idleEnabled)
+                .putString(k + "idleContent", idleContent.name())
+                .putString(k + "pauseIdle", pauseIdle.name())
+                .putBoolean(k + "resumeShowTrack", resumeShowTrack)
+                .putBoolean(k + "clockShowDate", clockShowDate)
+                .putBoolean(k + "minimalShowPlayer", minimalShowPlayer)
+                .putString(k + "shortcut0", shortcuts[0])
+                .putString(k + "shortcut1", shortcuts[1])
+                .putString(k + "shortcut2", shortcuts[2])
+                .putString(k + "shortcut3", shortcuts[3])
                 .apply();
     }
 

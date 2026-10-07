@@ -29,6 +29,7 @@ import android.widget.RemoteViews;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -46,9 +47,12 @@ import com.lpnovi.radiation.config.WidgetConfig.AlbumTone;
 import com.lpnovi.radiation.config.WidgetConfig.IconStyle;
 import com.lpnovi.radiation.config.WidgetConfig.ArtShape;
 import com.lpnovi.radiation.config.WidgetConfig.Background;
+import com.lpnovi.radiation.config.WidgetConfig.IdleContent;
+import com.lpnovi.radiation.config.WidgetConfig.PauseIdle;
 import com.lpnovi.radiation.config.WidgetConfig.TapAction;
 import com.lpnovi.radiation.config.WidgetConfig.Visualizer;
 import com.lpnovi.radiation.config.WidgetConfig.Weight;
+import com.lpnovi.radiation.media.LastPlayed;
 import com.lpnovi.radiation.media.MediaListenerService;
 import com.lpnovi.radiation.media.MediaSessions;
 import com.lpnovi.radiation.media.NowPlaying;
@@ -92,6 +96,11 @@ public class StudioActivity extends AppCompatActivity {
     private static final int[] TITLE_WEIGHTS = {R.id.ty_title_regular, R.id.ty_title_medium, R.id.ty_title_bold};
     private static final int[] ARTIST_WEIGHTS = {R.id.ty_artist_regular, R.id.ty_artist_medium};
     private static final int[] TITLE_LINES = {R.id.lines_one, R.id.lines_two};
+    private static final int[] IDLE_CONTENTS = {R.id.idle_resume_choice, R.id.idle_launch_choice,
+            R.id.idle_clock_choice, R.id.idle_minimal_choice};
+    private static final int[] IDLE_HINTS = {R.string.hint_idle_resume, R.string.hint_idle_launch,
+            R.string.hint_idle_clock, R.string.hint_idle_minimal};
+    private static final int[] PAUSE_IDLES = {R.id.pause_1, R.id.pause_5, R.id.pause_never};
 
     /** Custom background swatches: deep tones that keep light text, and two light ones that flip it. */
     private static final int[] SWATCHES = {0xFF000000, 0xFF1C1B1F, 0xFF0F1B2D, 0xFF12261E, 0xFF2A1630,
@@ -122,6 +131,11 @@ public class StudioActivity extends AppCompatActivity {
     private MaterialSwitch showTitle, fitTitle, previewSample;
     /** Studio-only: show long sample metadata in the preview instead of what's playing. */
     private boolean useSample;
+    /** Studio-only: preview the idle state instead of playing. Never touches real playback. */
+    private boolean previewIdle;
+    private ChipGroup idleContents;
+    private MaterialButtonToggleGroup pauseIdles, previewState;
+    private MaterialSwitch idleEnabled, resumeShowTrack, clockShowDate, minimalShowPlayer;
     private NowPlaying sample;
 
     @Override
@@ -182,6 +196,32 @@ public class StudioActivity extends AppCompatActivity {
         bindIcon = findViewById(R.id.bind_icon);
 
         findViewById(R.id.bind_row).setOnClickListener(x -> showPlayerPicker());
+        idleContents = findViewById(R.id.idle_group);
+        pauseIdles = findViewById(R.id.pause_idle_group);
+        previewState = findViewById(R.id.preview_state);
+        idleEnabled = findViewById(R.id.idle_enabled);
+        resumeShowTrack = findViewById(R.id.resume_show_track);
+        clockShowDate = findViewById(R.id.clock_show_date);
+        minimalShowPlayer = findViewById(R.id.minimal_show_player);
+        idleEnabled.setOnCheckedChangeListener((b, on) -> {
+            edit(() -> config.idleEnabled = on);
+            setPreviewIdle(on); // show what was just turned on (or off)
+        });
+        idleContents.setOnCheckedStateChangeListener((g, checked) -> {
+            if (checked.isEmpty()) return;
+            edit(() -> config.idleContent = IdleContent.values()[indexOf(IDLE_CONTENTS, checked.get(0))]);
+            setPreviewIdle(true);
+        });
+        onChoice(pauseIdles, PAUSE_IDLES, i -> edit(() -> config.pauseIdle = PauseIdle.values()[i]));
+        resumeShowTrack.setOnCheckedChangeListener((b, on) -> edit(() -> config.resumeShowTrack = on));
+        clockShowDate.setOnCheckedChangeListener((b, on) -> edit(() -> config.clockShowDate = on));
+        minimalShowPlayer.setOnCheckedChangeListener((b, on) -> edit(() -> config.minimalShowPlayer = on));
+        previewState.check(R.id.preview_playing);
+        previewState.addOnButtonCheckedListener((g, id, checked) -> {
+            if (!checked) return;
+            previewIdle = id == R.id.preview_idle;
+            renderPreview();
+        });
         onChoice(titleWeights, TITLE_WEIGHTS, i -> edit(() -> config.titleWeight = Weight.values()[i]));
         onChoice(artistWeights, ARTIST_WEIGHTS, i -> edit(() -> config.artistWeight = Weight.values()[i]));
         onChoice(titleLines, TITLE_LINES, i -> edit(() -> config.titleLines = i + 1));
@@ -330,6 +370,12 @@ public class StudioActivity extends AppCompatActivity {
         // Long sample text by default when nothing is playing for this widget, so typography is judgeable.
         useSample = TextUtils.isEmpty(WidgetUpdater.latest(config.boundPackage).title);
         previewSample.setChecked(useSample);
+        idleEnabled.setChecked(config.idleEnabled);
+        idleContents.check(IDLE_CONTENTS[config.idleContent.ordinal()]);
+        pauseIdles.check(PAUSE_IDLES[config.pauseIdle.ordinal()]);
+        resumeShowTrack.setChecked(config.resumeShowTrack);
+        clockShowDate.setChecked(config.clockShowDate);
+        minimalShowPlayer.setChecked(config.minimalShowPlayer);
         binding = false;
         refreshDependentControls();
         renderPreview();
@@ -367,6 +413,7 @@ public class StudioActivity extends AppCompatActivity {
         findViewById(R.id.title_options).setVisibility(config.showTitle ? View.VISIBLE : View.GONE);
         findViewById(R.id.artist_options).setVisibility(config.showArtist ? View.VISIBLE : View.GONE);
         refreshBindRow();
+        refreshIdleControls();
     }
 
     private void buildSwatches() {
@@ -400,6 +447,28 @@ public class StudioActivity extends AppCompatActivity {
         group.addOnButtonCheckedListener((g, id, checked) -> {
             if (checked) onPick.accept(indexOf(ids, id));
         });
+    }
+
+    // --- Idle ---
+
+    /** Progressive disclosure: idle options only when on, and only the selected content's options. */
+    private void refreshIdleControls() {
+        boolean on = config.idleEnabled;
+        IdleContent c = config.idleContent;
+        findViewById(R.id.idle_off_hint).setVisibility(on ? View.GONE : View.VISIBLE);
+        findViewById(R.id.idle_options).setVisibility(on ? View.VISIBLE : View.GONE);
+        ((TextView) findViewById(R.id.idle_hint)).setText(IDLE_HINTS[c.ordinal()]);
+        resumeShowTrack.setVisibility(c == IdleContent.RESUME ? View.VISIBLE : View.GONE);
+        findViewById(R.id.shortcut_slots).setVisibility(c == IdleContent.QUICK_LAUNCH ? View.VISIBLE : View.GONE);
+        clockShowDate.setVisibility(c == IdleContent.CLOCK ? View.VISIBLE : View.GONE);
+        minimalShowPlayer.setVisibility(c == IdleContent.MINIMAL ? View.VISIBLE : View.GONE);
+        if (on && c == IdleContent.QUICK_LAUNCH) buildShortcutRows();
+    }
+
+    /** Switches the preview state from code (e.g. after choosing idle content), not while loading. */
+    private void setPreviewIdle(boolean idle) {
+        if (binding) return;
+        previewState.check(idle ? R.id.preview_idle : R.id.preview_playing);
     }
 
     // --- Bind to player ---
@@ -466,6 +535,16 @@ public class StudioActivity extends AppCompatActivity {
             statuses.add(getString(R.string.player_not_installed));
         }
 
+        showAppChoice(getString(R.string.picker_title), packages, names, icons, statuses, config.boundPackage,
+                which -> edit(() -> {
+                    config.boundPackage = packages.get(which);
+                    config.boundLabel = which == 0 ? null : names.get(which).toString();
+                }));
+    }
+
+    /** A picker of apps (icon, name, optional status, check on the selected one). Shared by both pickers. */
+    private void showAppChoice(String title, List<String> packages, List<CharSequence> names, List<Drawable> icons,
+                               List<CharSequence> statuses, @Nullable String selectedPackage, IntConsumer onPick) {
         LayoutInflater inflater = LayoutInflater.from(this);
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.item_player, packages) {
             @NonNull
@@ -485,19 +564,89 @@ public class StudioActivity extends AppCompatActivity {
                 TextView status = row.findViewById(R.id.player_status);
                 status.setVisibility(statuses.get(position) == null ? View.GONE : View.VISIBLE);
                 status.setText(statuses.get(position));
-                boolean selected = java.util.Objects.equals(packages.get(position), config.boundPackage);
+                boolean selected = java.util.Objects.equals(packages.get(position), selectedPackage);
                 row.findViewById(R.id.player_check).setVisibility(selected ? View.VISIBLE : View.INVISIBLE);
                 return row;
             }
         };
         new MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.picker_title)
-                .setAdapter(adapter, (d, which) -> edit(() -> {
-                    config.boundPackage = packages.get(which);
-                    config.boundLabel = which == 0 ? null : names.get(which).toString();
-                }))
+                .setTitle(title)
+                .setAdapter(adapter, (d, which) -> onPick.accept(which))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    // --- Idle: Quick Launch shortcuts ---
+
+    /** One row per shortcut slot: the chosen app, or "Add app". Tapping opens the app picker. */
+    private void buildShortcutRows() {
+        LinearLayout slots = findViewById(R.id.shortcut_slots);
+        slots.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+        for (int i = 0; i < WidgetConfig.MAX_SHORTCUTS; i++) {
+            final int slot = i;
+            String pkg = config.shortcuts[i];
+            View row = inflater.inflate(R.layout.item_player, slots, false);
+            ImageView icon = row.findViewById(R.id.player_icon);
+            TextView name = row.findViewById(R.id.player_name);
+            TextView status = row.findViewById(R.id.player_status);
+            Drawable appIcon = null;
+            if (pkg != null) {
+                try {
+                    appIcon = getPackageManager().getApplicationIcon(pkg);
+                } catch (PackageManager.NameNotFoundException ignored) {
+                    // Uninstalled since it was chosen; offer the slot again.
+                }
+            }
+            if (appIcon != null) {
+                icon.setImageDrawable(appIcon);
+                name.setText(Players.label(this, pkg, null));
+            } else {
+                icon.setImageResource(R.drawable.ic_add);
+                icon.setImageTintList(ColorStateList.valueOf(MaterialColors.getColor(icon,
+                        com.google.android.material.R.attr.colorOnSurfaceVariant)));
+                name.setText(R.string.shortcut_add);
+            }
+            status.setVisibility(View.VISIBLE);
+            status.setText(getString(R.string.shortcut_slot, i + 1));
+            row.findViewById(R.id.player_check).setVisibility(View.GONE);
+            row.setPaddingRelative(0, 0, 0, 0);
+            row.setOnClickListener(x -> showShortcutPicker(slot));
+            slots.addView(row);
+        }
+    }
+
+    /** Launchable apps (found off the main thread), "None" first to clear the slot. */
+    private void showShortcutPicker(int slot) {
+        Context app = getApplicationContext();
+        new Thread(() -> {
+            PackageManager pm = app.getPackageManager();
+            Intent launcher = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+            List<String> packages = new ArrayList<>();
+            List<CharSequence> names = new ArrayList<>();
+            List<Drawable> icons = new ArrayList<>();
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            List<android.content.pm.ResolveInfo> found = pm.queryIntentActivities(launcher, 0);
+            java.text.Collator collator = java.text.Collator.getInstance();
+            found.sort((a, b) -> collator.compare(a.loadLabel(pm).toString(), b.loadLabel(pm).toString()));
+            packages.add(null);
+            names.add(getString(R.string.shortcut_none));
+            icons.add(null);
+            for (android.content.pm.ResolveInfo r : found) {
+                String pkg = r.activityInfo.packageName;
+                if (pkg.equals(app.getPackageName()) || !seen.add(pkg)) continue;
+                packages.add(pkg);
+                names.add(r.loadLabel(pm));
+                icons.add(r.loadIcon(pm));
+            }
+            List<CharSequence> statuses = new ArrayList<>();
+            for (int i = 0; i < packages.size(); i++) statuses.add(null);
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                showAppChoice(getString(R.string.pick_app), packages, names, icons, statuses, config.shortcuts[slot],
+                        which -> edit(() -> config.shortcuts[slot] = packages.get(which)));
+            });
+        }, "radiation-apps").start();
     }
 
     /** Snaps a stored value onto a slider's range and step (stored values may predate the slider). */
@@ -513,7 +662,7 @@ public class StudioActivity extends AppCompatActivity {
             Paint paint = new Paint();
             paint.setShader(new LinearGradient(0, 0, 256, 256, 0xFFC0504D, 0xFF2D4A7A, Shader.TileMode.CLAMP));
             new Canvas(art).drawRect(0, 0, 256, 256, paint);
-            sample = NowPlaying.sample(getString(R.string.sample_title), getString(R.string.sample_artist),
+            sample = NowPlaying.sample(getPackageName(), getString(R.string.sample_title), getString(R.string.sample_artist),
                     art, 0xFFB5463F);
         }
         return sample;
@@ -536,9 +685,26 @@ public class StudioActivity extends AppCompatActivity {
         float widthDp = placed ? WidgetRenderer.widthDp(this, manager, widgetId) : 320;
         float heightDp = !placed
                 ? 80 : WidgetRenderer.heightDp(this, manager, widgetId);
-        NowPlaying np = useSample ? sample() : WidgetUpdater.latest(config.boundPackage);
-        RemoteViews views = WidgetRenderer.build(app, widgetId, config, np,
-                MediaSessions.hasAccess(this), widthDp, heightDp);
+        // Preview frame: never interactive (no PendingIntents), and the Studio-only preview state
+        // decides what it shows; real playback is never touched.
+        WidgetRenderer.Frame f = new WidgetRenderer.Frame();
+        f.interactive = false;
+        f.hasAccess = MediaSessions.hasAccess(this);
+        f.widthDp = widthDp;
+        f.heightDp = heightDp;
+        NowPlaying live = WidgetUpdater.latest(config.boundPackage);
+        NowPlaying remembered = LastPlayed.get(this, config.boundPackage);
+        // With no history, a follow-active preview borrows the sample as "your last track"; a bound
+        // widget would show its player plainly, so its preview does too.
+        f.lastKnown = remembered.packageName != null || config.boundPackage != null
+                ? remembered : sample().withPlaying(false);
+        if (previewIdle) {
+            f.idle = true;
+            f.np = live.playing ? NowPlaying.NOTHING : live;
+        } else {
+            f.np = useSample || TextUtils.isEmpty(live.title) ? sample() : live.withPlaying(true);
+        }
+        RemoteViews views = WidgetRenderer.build(app, widgetId, config, f);
         ViewGroup.LayoutParams lp = preview.getLayoutParams();
         int heightPx = Math.round(heightDp * getResources().getDisplayMetrics().density);
         if (lp.height != heightPx) {
