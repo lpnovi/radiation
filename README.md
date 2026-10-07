@@ -19,7 +19,12 @@ A clean, highly customizable **4×1 media widget** for Android.
 
 No ads, analytics, tracking, accounts or internet permission.
 Radiation asks for **notification access** only because Android exposes other apps' media sessions
-through it. Notifications are never read or stored. Playback buttons work without it.
+through it. Other notifications are never read or stored; of players' media notifications only the
+buttons are used (some players expose shuffle nowhere else). Playback buttons work without it.
+
+If a player misbehaves, *Studio > Advanced > Copy diagnostic report* copies a plain-text report
+(device, widget settings, what each player's media session offers, recent shuffle attempts; no song
+info) to paste into a message or issue. Radiation never sends it anywhere itself.
 
 On Android 13+, if you sideload the APK the access switch may be greyed out: open Radiation's
 *App info → ⋮ → Allow restricted settings* first.

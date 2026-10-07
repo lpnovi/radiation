@@ -17,12 +17,14 @@ import android.support.v4.media.session.PlaybackStateCompat;
 /**
  * Debug-only fake media player, driven over adb:
  *
- *   adb shell am broadcast -n com.lpnovi.radiation/.debug.DebugPlayer --es cmd start|next|prev|toggle|kill
+ *   adb shell am broadcast -n com.lpnovi.radiation/.debug.DebugPlayer --es cmd start|next|prev|toggle|kill|report
  *
  * Shuffle flavor, chosen at start ({@code --es shuffle ...}), to exercise each strategy:
  *   standard (default) advertises ACTION_SET_SHUFFLE_MODE and reports its mode;
  *   custom   offers shuffle only as a playback custom action (compat mode left at its default);
- *   deaf     reports a compat mode (always NONE) but advertises nothing and ignores commands.
+ *   deaf     reports a compat mode (always NONE) but advertises nothing and ignores commands;
+ *   notify   like deaf, but posts a media notification with a "Shuffle" button (needs
+ *            {@code adb shell pm grant com.lpnovi.radiation android.permission.POST_NOTIFICATIONS}).
  *
  * A MediaSessionCompat, like Spotify's, so shuffle works end to end. Mimics Spotify's habit of
  * publishing a new track's text first and its artwork ~400ms later, and cycles through
@@ -56,9 +58,20 @@ public class DebugPlayer extends BroadcastReceiver {
                 ensure(app); playing = true; show(index); break;
             case "next": ensure(app); show(index + 1); break;
             case "prev": ensure(app); show(index - 1); break;
+            case "report": // the Studio's diagnostic report, without the clipboard
+                for (String line : com.lpnovi.radiation.media.Diagnostics.report(app).split("\n")) {
+                    android.util.Log.d("RadiationReport", line);
+                }
+                break;
+            case "nshuffle":
+                customShuffle = !customShuffle;
+                android.util.Log.d("RadiationDebugPlayer", "notification shuffle -> " + customShuffle);
+                notification(app);
+                break;
             case "toggle": ensure(app); playing = !playing; state(); break;
             case "kill":
                 flavor = "standard";
+                app.getSystemService(android.app.NotificationManager.class).cancel(NOTIFICATION_ID);
                 if (session != null) {
                     session.release();
                     session = null;
@@ -90,6 +103,31 @@ public class DebugPlayer extends BroadcastReceiver {
         session.setShuffleMode(PlaybackStateCompat.SHUFFLE_MODE_NONE);
         session.setActive(true);
         playing = true;
+        if ("notify".equals(flavor)) notification(app);
+    }
+
+    private static final int NOTIFICATION_ID = 7;
+
+    /** A media notification whose shuffle button is the player's only shuffle control. */
+    private static void notification(Context app) {
+        android.app.NotificationManager nm = app.getSystemService(android.app.NotificationManager.class);
+        nm.createNotificationChannel(new android.app.NotificationChannel("debug_player", "Debug player",
+                android.app.NotificationManager.IMPORTANCE_LOW));
+        String[] labels = {"Previous", "Pause", "Next", customShuffle ? "Shuffle on" : "Shuffle off"};
+        String[] cmds = {"prev", "toggle", "next", "nshuffle"};
+        android.app.Notification.Builder b = new android.app.Notification.Builder(app, "debug_player")
+                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setContentTitle("Radiation debug player")
+                .setStyle(new android.app.Notification.MediaStyle()
+                        .setMediaSession((android.media.session.MediaSession.Token) session.getSessionToken().getToken())
+                        .setShowActionsInCompactView(0, 1, 2));
+        for (int i = 0; i < labels.length; i++) {
+            Intent intent = new Intent(app, DebugPlayer.class).putExtra("cmd", cmds[i]);
+            b.addAction(new android.app.Notification.Action.Builder(null, labels[i],
+                    android.app.PendingIntent.getBroadcast(app, i, intent,
+                            android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT)).build());
+        }
+        nm.notify(NOTIFICATION_ID, b.build());
     }
 
     private static void show(int i) {

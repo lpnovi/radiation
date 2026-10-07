@@ -16,7 +16,7 @@ public class ShuffleTest {
     private static final String[] NO = new String[0];
 
     private static Shuffle.Choice choose(boolean ready, int mode, long actions) {
-        return Shuffle.choose(ready, mode, actions, NO, NO, false);
+        return Shuffle.choose(ready, mode, actions, NO, NO, NO, false);
     }
 
     @Test
@@ -38,19 +38,46 @@ public class ShuffleTest {
     }
 
     @Test
+    public void notificationShuffleButton() {
+        // A compat session reporting the default NONE, whose only real shuffle is its notification button.
+        Shuffle.Choice c = Shuffle.choose(true, NONE, 0, NO, NO, new String[]{"Previous", "Pause", "Next", "Shuffle"}, false);
+        assertEquals(Shuffle.Strategy.NOTIFICATION, c.strategy);
+        assertEquals(3, c.index);
+        assertEquals(Shuffle.UNKNOWN, c.state);
+        // Session custom action is preferred: it is addressed to the session itself.
+        assertEquals(Shuffle.Strategy.CUSTOM_ACTION, Shuffle.choose(true, NONE, 0, new String[]{"shuffle"},
+                new String[]{"Shuffle"}, new String[]{"Shuffle"}, false).strategy);
+    }
+
+    @Test
+    public void ignoredAdvertisedFallsThroughToOtherRoutes() {
+        Shuffle.Choice c = Shuffle.choose(true, NONE, ADVERTISED, NO, NO, new String[]{"Aleatorio"}, true);
+        assertEquals(Shuffle.Strategy.NOTIFICATION, c.strategy);
+        assertEquals(Shuffle.Strategy.NONE, Shuffle.choose(true, NONE, ADVERTISED, NO, NO, NO, true).strategy);
+    }
+
+    @Test
+    public void localizedLabels() {
+        for (String label : new String[]{"Lecture aléatoire", "Zufallswiedergabe", "Reprodução aleatória",
+                "Putar acak", "Перемешать", "シャッフル再生", "随机播放", "셔플", "शफ़ल करें", "ACTION_SHUFFLE_MODE"}) {
+            assertEquals(label, 0, Shuffle.findShuffle(new String[]{label}));
+        }
+        assertEquals(-1, Shuffle.findShuffle(new String[]{"Repeat", "Like", "Close", "Favorite", "Play mode"}));
+    }
+
+    @Test
     public void readableButUnadvertisedKeepsWorkingUntilIgnored() {
         Shuffle.Choice c = choose(true, NONE, 0);
         assertEquals(Shuffle.Strategy.STANDARD, c.strategy);
         assertEquals(Shuffle.OFF, c.state);
-        assertFalse(c.advertised);
-        Shuffle.Choice ignored = Shuffle.choose(true, NONE, 0, NO, NO, true);
+        Shuffle.Choice ignored = Shuffle.choose(true, NONE, 0, NO, NO, NO, true);
         assertEquals(Shuffle.Strategy.NONE, ignored.strategy);
         assertEquals(Shuffle.UNSUPPORTED, ignored.state);
     }
 
     @Test
-    public void advertisedNeverDegradesEvenIfIgnoredOnce() {
-        assertEquals(Shuffle.Strategy.STANDARD, Shuffle.choose(true, NONE, ADVERTISED, NO, NO, true).strategy);
+    public void advertisedAndAnsweringStaysStandard() {
+        assertEquals(Shuffle.Strategy.STANDARD, Shuffle.choose(true, NONE, ADVERTISED, NO, NO, NO, false).strategy);
     }
 
     @Test
@@ -58,15 +85,15 @@ public class ShuffleTest {
         // A compat session reports NONE by default even if it never implements shuffle; its own
         // custom action is the real control.
         Shuffle.Choice c = Shuffle.choose(true, NONE, 0, new String[]{"like", "player.TOGGLE_SHUFFLE"},
-                new String[]{"Like", "Shuffle off"}, false);
+                new String[]{"Like", "Shuffle off"}, NO, false);
         assertEquals(Shuffle.Strategy.CUSTOM_ACTION, c.strategy);
-        assertEquals("player.TOGGLE_SHUFFLE", c.customAction);
+        assertEquals("player.TOGGLE_SHUFFLE", c.target);
         assertEquals(Shuffle.UNKNOWN, c.state);
     }
 
     @Test
     public void advertisedStandardBeatsCustomAction() {
-        Shuffle.Choice c = Shuffle.choose(true, ALL, ADVERTISED, new String[]{"shuffle"}, new String[]{"Shuffle"}, false);
+        Shuffle.Choice c = Shuffle.choose(true, ALL, ADVERTISED, new String[]{"shuffle"}, new String[]{"Shuffle"}, NO, false);
         assertEquals(Shuffle.Strategy.STANDARD, c.strategy);
         assertEquals(Shuffle.ON, c.state);
     }

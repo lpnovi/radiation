@@ -2,6 +2,9 @@
 <!-- Debug builds only: a scriptable fake player for exercising widget transitions on an emulator. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <!-- Debug player's media notification (the "notify" shuffle flavor). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application>
         <receiver
             android:name=".debug.DebugPlayer"

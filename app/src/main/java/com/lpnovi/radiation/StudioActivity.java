@@ -2,6 +2,8 @@ package com.lpnovi.radiation;
 
 import android.appwidget.AppWidgetManager;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -27,6 +29,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RemoteViews;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -52,6 +55,7 @@ import com.lpnovi.radiation.config.WidgetConfig.PauseIdle;
 import com.lpnovi.radiation.config.WidgetConfig.TapAction;
 import com.lpnovi.radiation.config.WidgetConfig.Visualizer;
 import com.lpnovi.radiation.config.WidgetConfig.Weight;
+import com.lpnovi.radiation.media.Diagnostics;
 import com.lpnovi.radiation.media.LastPlayed;
 import com.lpnovi.radiation.media.MediaListenerService;
 import com.lpnovi.radiation.media.MediaSessions;
@@ -235,6 +239,7 @@ public class StudioActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.access_grant).setOnClickListener(x -> openAccessSettings());
+        findViewById(R.id.copy_diagnostics).setOnClickListener(x -> copyDiagnostics());
         View pin = findViewById(R.id.pin_widget);
         AppWidgetManager manager = AppWidgetManager.getInstance(this);
         pin.setVisibility(manager.isRequestPinAppWidgetSupported() ? View.VISIBLE : View.GONE);
@@ -716,6 +721,16 @@ public class StudioActivity extends AppCompatActivity {
             preview.addView(previewContent);
         } else {
             views.reapply(app, previewContent);
+        }
+    }
+
+    /** Android 13+ confirms clipboard copies itself; older versions get a toast. */
+    private void copyDiagnostics() {
+        ClipboardManager clipboard = getSystemService(ClipboardManager.class);
+        clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.diagnostics_title),
+                Diagnostics.report(this)));
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            Toast.makeText(this, R.string.diagnostics_copied, Toast.LENGTH_SHORT).show();
         }
     }
 

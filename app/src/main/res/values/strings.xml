@@ -16,7 +16,7 @@
 
     <string name="studio_subtitle">Widget Studio</string>
     <string name="access_title">See what\'s playing</string>
-    <string name="access_body">To show the title, artist and artwork from Spotify and other players, Android requires Radiation to have notification access. Radiation only reads media sessions. It never reads, stores or sends your notifications, and it has no internet access. Playback controls work without it.</string>
+    <string name="access_body">To show the title, artist and artwork from Spotify and other players, Android requires Radiation to have notification access. Radiation only reads media sessions and the buttons on players\' media notifications. It never reads, stores or sends your other notifications, and it has no internet access. Playback controls work without it.</string>
     <string name="access_restricted_hint">If the switch is greyed out, open Radiation\'s App info, tap ⋮ and choose “Allow restricted settings” first.</string>
     <string name="access_grant">Grant access</string>
     <string name="no_widgets">No Radiation widget on your home screen yet. Add one, then style it here; the preview above is exactly what it will look like.</string>
@@ -116,6 +116,11 @@
     <string name="idle_paused_on">Paused · %1$s</string>
     <string name="idle_resume">Resume</string>
     <string name="launch_hint">Choose apps in Radiation</string>
+    <string name="section_advanced">Advanced</string>
+    <string name="diagnostics_title">Diagnostic report</string>
+    <string name="hint_diagnostics">If a player doesn\'t work right: play music, try the button that misbehaves (e.g. shuffle), then copy the report and paste it in a message. It lists your phone model, Android version, your widgets\' settings, the music apps with an active session and the controls they offer, and recent shuffle attempts. No song titles, artists or other notifications. Radiation never sends it anywhere itself.</string>
+    <string name="copy_diagnostics">Copy diagnostic report</string>
+    <string name="diagnostics_copied">Diagnostic report copied</string>
     <string name="section_idle">Idle</string>
     <string name="idle_mode">Idle mode</string>
     <string name="hint_idle_off">When nothing is playing, show something useful instead of “Nothing playing”. Music always brings the player back.</string>

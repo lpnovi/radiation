@@ -51,14 +51,17 @@ Players expose shuffle in different ways, so `Shuffle.choose` (pure, tested) pic
 | Order | Session exposes | Command | State shown |
 |---|---|---|---|
 | 1 | `ACTION_SET_SHUFFLE_MODE` in its playback actions | compat `setShuffleMode` (works before the compat handshake) | Known on/off once the compat mode is readable; otherwise *unknown* (`getShuffleMode() == INVALID` is unknown, not unsupported) |
-| 2 | A playback custom action whose id or name contains "shuffle" (e.g. its notification button) | `sendCustomAction` with that session's own action id | Unknown |
-| 3 | A readable compat mode, without advertising the action (e.g. Spotify) | compat `setShuffleMode` | Known. Caveat: every `MediaSessionCompat` reports NONE by default, even if it has no shuffle, so if the mode hasn't changed 2s after a command the session is treated as unsupported until it reports a change |
-| 4 | Only the deprecated `ACTION_SET_SHUFFLE_MODE_ENABLED` | the support library's legacy custom action | Unknown |
-| 5 | Nothing | none | Unsupported: faded, taps ignored |
+| 2 | A playback custom action whose id or name says shuffle | `sendCustomAction` with that session's own action id | Unknown |
+| 3 | A shuffle button on the player's own media notification (`Notification.actions` of the notification naming that session) | the button's `PendingIntent`, exactly what tapping it in the shade does | Unknown |
+| 4 | A readable compat mode, without advertising the action (e.g. Spotify) | compat `setShuffleMode` | Known |
+| 5 | Only the deprecated `ACTION_SET_SHUFFLE_MODE_ENABLED` | the support library's legacy custom action | Unknown |
+| 6 | Nothing | none | Unsupported: faded, taps ignored |
+
+"Says shuffle" is a substring match on a list of words in about 20 languages, since labels follow the phone's language. Every `MediaSessionCompat` reports NONE by default even without shuffle, so a standard command whose mode is readable but hasn't changed 2s later counts as ignored, and the session falls through to the next route (until it reports a change).
 
 Unknown looks like "off", slightly softened, with its own content description; the widget never flips it optimistically, so it never shows a guessed on/off. No accessibility automation, taps, root or private broadcasts are used: only what the session itself publishes.
 
-Diagnostics (debug builds): `adb logcat -s RadiationShuffle` logs, per session, the package, action bitmask, both shuffle actions, compat readiness/mode, custom action ids and names, extras keys (not values) and the chosen strategy, each time one of those changes, plus every command sent. No track metadata is logged. `adb shell dumpsys media_session` shows the same from the system's side. The debug player has `--es shuffle standard|custom|deaf` to exercise strategies 1, 2 and 3.
+Diagnostics: *Studio > Advanced > Copy diagnostic report* puts a plain-text report on the clipboard: app/Android version, device, language, widgets (binding, shuffle on/off), each active session (package, action bitmask, both shuffle actions, compat readiness/mode, custom action ids and names, notification button titles, extras keys but not values, chosen strategy) and the last 60 shuffle events (capability changes, commands sent, ignored commands). In memory only, so it covers the current process; no track metadata. Debug builds also log the events under `RadiationShuffle`. The debug player has `--es shuffle standard|custom|deaf|notify` and `--es cmd report` (logs the report under `RadiationReport`).
 
 ## Text
 

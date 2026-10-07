@@ -888,6 +888,41 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- Advanced -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Studio.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            style="@style/Studio.Section"
+                            android:text="@string/section_advanced" />
+
+                        <TextView
+                            style="@style/Studio.Label"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/diagnostics_title" />
+
+                        <TextView
+                            style="@style/Studio.Hint"
+                            android:text="@string/hint_diagnostics" />
+
+                        <Button
+                            android:id="@+id/copy_diagnostics"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/copy_diagnostics" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

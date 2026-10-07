@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.service.notification.NotificationListenerService;
+import android.service.notification.StatusBarNotification;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -24,7 +25,8 @@ import java.util.List;
 
 /**
  * Exists because Android only exposes other apps' media sessions to enabled notification listeners.
- * Notifications themselves are ignored. While bound, it requests a render on every session,
+ * Of notifications, only players' media notifications are looked at, and only for their buttons
+ * (a shuffle button some players expose nowhere else); nothing is stored or sent. While bound, it requests a render on every session,
  * metadata or playback change instead of polling. All callbacks are unregistered on disconnect.
  */
 public class MediaListenerService extends NotificationListenerService {
@@ -66,7 +68,22 @@ public class MediaListenerService extends NotificationListenerService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             WallpaperManager.getInstance(this).addOnColorsChangedListener(wallpaperListener, handler);
         }
+        try {
+            for (StatusBarNotification n : getActiveNotifications()) Shuffle.onNotification(n, false);
+        } catch (RuntimeException ignored) {
+            // The listener can be unbound again before this call lands.
+        }
         watch(sessionManager.getActiveSessions(self));
+    }
+
+    @Override
+    public void onNotificationPosted(StatusBarNotification sbn) {
+        if (Shuffle.onNotification(sbn, false)) render();
+    }
+
+    @Override
+    public void onNotificationRemoved(StatusBarNotification sbn) {
+        if (Shuffle.onNotification(sbn, true)) render();
     }
 
     @Override
