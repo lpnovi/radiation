@@ -60,7 +60,8 @@
     <string name="show_previous">Previous</string>
     <string name="show_next">Next</string>
     <string name="show_shuffle">Shuffle</string>
-    <string name="hint_shuffle">A small button in the top-right corner, for players that support it (Spotify included).</string>
+    <string name="hint_shuffle">A small button in the top-right corner. It appears for players that offer shuffle (Spotify included) and stays hidden for players that don\'t; this setting is kept either way.</string>
+    <string name="hint_shuffle_unsupported">Shuffle isn\'t exposed by %1$s and will be hidden while it\'s active. It comes back with a player that offers it.</string>
 
     <!-- Visualizer -->
     <string name="section_visualizer">Visualizer</string>

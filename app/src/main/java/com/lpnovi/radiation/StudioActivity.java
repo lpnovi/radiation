@@ -60,6 +60,7 @@ import com.lpnovi.radiation.media.LastPlayed;
 import com.lpnovi.radiation.media.MediaListenerService;
 import com.lpnovi.radiation.media.MediaSessions;
 import com.lpnovi.radiation.media.NowPlaying;
+import com.lpnovi.radiation.media.Shuffle;
 import com.lpnovi.radiation.widget.Players;
 import com.lpnovi.radiation.widget.RadiationWidgetProvider;
 import com.lpnovi.radiation.widget.WidgetRenderer;
@@ -132,6 +133,7 @@ public class StudioActivity extends AppCompatActivity {
     private ImageView bindIcon;
     private LinearLayout swatches;
     private MaterialSwitch outline, showArt, showArtist, showPrevious, showNext, showShuffle;
+    private TextView shuffleHint;
     private MaterialSwitch showTitle, fitTitle, previewSample;
     /** Studio-only: show long sample metadata in the preview instead of what's playing. */
     private boolean useSample;
@@ -186,6 +188,7 @@ public class StudioActivity extends AppCompatActivity {
         showPrevious = findViewById(R.id.show_previous);
         showNext = findViewById(R.id.show_next);
         showShuffle = findViewById(R.id.show_shuffle);
+        shuffleHint = findViewById(R.id.shuffle_hint);
         titleWeights = findViewById(R.id.title_weight_group);
         artistWeights = findViewById(R.id.artist_weight_group);
         titleLines = findViewById(R.id.title_lines_group);
@@ -682,6 +685,16 @@ public class StudioActivity extends AppCompatActivity {
      * The preview is the real widget: same RemoteViews, inflated locally at the real cell height,
      * and updated in place (reapply) so edits don't flicker.
      */
+    /** A bound player known to lack shuffle gets a note; follow-active stays generic (it varies). */
+    private void explainShuffle(NowPlaying live) {
+        String bound = config.boundPackage;
+        boolean unsupported = bound != null && (Shuffle.knownUnsupported(this, bound)
+                || live.hasSession && bound.equals(live.packageName) && live.shuffle == Shuffle.UNSUPPORTED);
+        shuffleHint.setText(unsupported
+                ? getString(R.string.hint_shuffle_unsupported, Players.label(this, bound, config.boundLabel))
+                : getString(R.string.hint_shuffle));
+    }
+
     private void renderPreview() {
         if (preview == null) return;
         Context app = getApplicationContext(); // AppCompat's inflater would swap in views RemoteViews rejects
@@ -709,6 +722,7 @@ public class StudioActivity extends AppCompatActivity {
         } else {
             f.np = useSample || TextUtils.isEmpty(live.title) ? sample() : live.withPlaying(true);
         }
+        explainShuffle(live);
         RemoteViews views = WidgetRenderer.build(app, widgetId, config, f);
         ViewGroup.LayoutParams lp = preview.getLayoutParams();
         int heightPx = Math.round(heightDp * getResources().getDisplayMetrics().density);

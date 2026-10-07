@@ -55,9 +55,11 @@ Players expose shuffle in different ways, so `Shuffle.choose` (pure, tested) pic
 | 3 | A shuffle button on the player's own media notification (`Notification.actions` of the notification naming that session) | the button's `PendingIntent`, exactly what tapping it in the shade does | Unknown |
 | 4 | A readable compat mode, without advertising the action (e.g. Spotify) | compat `setShuffleMode` | Known |
 | 5 | Only the deprecated `ACTION_SET_SHUFFLE_MODE_ENABLED` | the support library's legacy custom action | Unknown |
-| 6 | Nothing | none | Unsupported: faded, taps ignored |
+| 6 | Nothing | none | Unsupported: the button is hidden |
 
 "Says shuffle" is a substring match on a list of words in about 20 languages, since labels follow the phone's language. Every `MediaSessionCompat` reports NONE by default even without shuffle, so a standard command whose mode is readable but hasn't changed 2s later counts as ignored, and the session falls through to the next route (until it reports a change).
+
+Visibility (`Shuffle.visible`, tested): the button shows when the user's *Show shuffle* is on and the current player offers shuffle; with a player that doesn't, it is hidden for as long as that player is active and returns with one that does. The saved setting is never changed. Because the corner shuffle is an overlay, hiding it moves nothing else. A player seen ignoring the command (and not advertising shuffle) is remembered per app, so its button doesn't reappear on its next session; it is forgotten if that player ever reports a shuffle change. Without a live session the button follows the setting, except for players remembered this way. The Studio explains when a bound player lacks shuffle; follow-active keeps the generic hint since the player varies. Confirmed case: Lark Player (`com.dywx.larkplayer`) advertises neither shuffle action and only `LIKE`/`Stop` custom actions, and ignores `setShuffleMode`.
 
 Unknown looks like "off", slightly softened, with its own content description; the widget never flips it optimistically, so it never shows a guessed on/off. No accessibility automation, taps, root or private broadcasts are used: only what the session itself publishes.
 

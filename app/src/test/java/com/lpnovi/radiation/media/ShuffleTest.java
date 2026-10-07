@@ -124,4 +124,69 @@ public class ShuffleTest {
         assertFalse(Shuffle.nextOn(Shuffle.ON, false));
         assertTrue(Shuffle.nextOn(Shuffle.OFF, true));
     }
+
+    // --- Runtime visibility (the saved "Show shuffle" setting is an input, never changed) ---
+
+    private static final String LARK = "com.dywx.larkplayer", SPOTIFY = "com.spotify.music";
+    /** Lark as its diagnostic report showed it: readable default mode, no shuffle action, LIKE/Stop only. */
+    private static final String[] LARK_IDS = {"com.dywx.larkplayer.remote.LIKE", "com.dywx.larkplayer.remote.Stop"};
+    private static final String[] LARK_NAMES = {"Like", "Stop"};
+
+    private static int larkState(boolean ignoredOnce) {
+        return Shuffle.choose(true, NONE, 0x236, LARK_IDS, LARK_NAMES, NO, ignoredOnce).state;
+    }
+
+    private static int spotifyState() {
+        return choose(true, ALL, ADVERTISED).state;
+    }
+
+    @Test
+    public void a_supportedPlayerShowsShuffle() {
+        assertEquals(Shuffle.ON, spotifyState());
+        assertTrue(Shuffle.visible(true, true, spotifyState(), false));
+    }
+
+    @Test
+    public void b_larkHidesShuffleOnceItsIgnoredCommandIsSeen() {
+        assertEquals(Shuffle.UNSUPPORTED, larkState(true));
+        assertFalse(Shuffle.visible(true, true, larkState(true), false));
+        // Remembered: no flash of a dead button the next time Lark has no session or restarts.
+        assertFalse(Shuffle.visible(true, false, Shuffle.UNSUPPORTED, true));
+    }
+
+    @Test
+    public void c_settingOffHidesEvenForSupportedPlayers() {
+        assertFalse(Shuffle.visible(false, true, spotifyState(), false));
+        assertFalse(Shuffle.visible(false, true, Shuffle.UNKNOWN, false));
+    }
+
+    @Test
+    public void d_e_switchingPlayersFlipsVisibilityWithoutTouchingTheSetting() {
+        boolean setting = true;
+        assertFalse(Shuffle.visible(setting, true, larkState(true), false));   // Lark
+        assertTrue(Shuffle.visible(setting, true, spotifyState(), false));     // then Spotify: back
+        assertFalse(Shuffle.visible(setting, true, larkState(true), false));   // then Lark again: gone
+        assertTrue(setting);
+    }
+
+    @Test
+    public void f_boundLarkKeepsItsControlsAndNeverBorrowsShuffle() {
+        // Bound to Lark while Spotify plays: controls still resolve to Lark's session...
+        assertEquals(1, MediaSessions.pick(new String[]{SPOTIFY, LARK},
+                new int[]{android.media.session.PlaybackState.STATE_PLAYING,
+                        android.media.session.PlaybackState.STATE_PAUSED}, LARK));
+        // ...and Lark has no shuffle to send, so nothing is sent anywhere.
+        assertEquals(Shuffle.Strategy.NONE, Shuffle.choose(true, NONE, 0x236, LARK_IDS, LARK_NAMES, NO, true).strategy);
+    }
+
+    @Test
+    public void g_unknownSupportedStaysAvailable() {
+        assertTrue(Shuffle.visible(true, true, Shuffle.UNKNOWN, false));
+        assertFalse(Shuffle.UNKNOWN == Shuffle.UNSUPPORTED);
+    }
+
+    @Test
+    public void noSessionKeepsTheButtonUnlessThePlayerIsKnownToLackShuffle() {
+        assertTrue(Shuffle.visible(true, false, Shuffle.UNSUPPORTED, false));
+    }
 }

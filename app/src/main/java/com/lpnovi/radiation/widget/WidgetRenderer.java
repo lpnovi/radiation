@@ -248,7 +248,11 @@ public final class WidgetRenderer {
         int[] icons = ICONS[config.iconStyle.ordinal()];
         v.setImageViewResource(R.id.previous, icons[PREVIOUS]);
         v.setImageViewResource(R.id.next, icons[NEXT]);
-        setShuffle(context, v, config.showShuffle && idleContent == null, np.shuffle, t, icons);
+        // Hidden while the player doesn't offer shuffle; the saved setting is untouched, so it returns
+        // with a player that does. The corner is an overlay, so nothing else moves.
+        boolean shuffleShown = Shuffle.visible(config.showShuffle, np.hasSession, np.shuffle,
+                Shuffle.knownUnsupported(context, np.packageName));
+        setShuffle(context, v, shuffleShown && idleContent == null, np.shuffle, t, icons);
 
         // Visualizer: the song's accent, softened so it stays an accent rather than a feature.
         int vizColor = (t.accent & 0x00FFFFFF) | VIZ_ALPHA << 24;
@@ -461,7 +465,7 @@ public final class WidgetRenderer {
     /**
      * On: accent plus a dot under the glyph (state isn't conveyed by color alone). Off: secondary
      * text color. Supported but the player doesn't report the state: the off glyph, slightly
-     * softened (never a guessed on/off). Unsupported by the player: faded, and taps are ignored.
+     * softened (never a guessed on/off). Players without shuffle don't get the button at all.
      */
     private static void setShuffle(Context context, RemoteViews v, boolean show, int mode, ColorEngine.Theme t,
                                    int[] icons) {

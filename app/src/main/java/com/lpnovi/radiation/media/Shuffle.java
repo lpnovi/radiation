@@ -3,6 +3,7 @@ package com.lpnovi.radiation.media;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.media.session.MediaController;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
@@ -116,7 +117,50 @@ public final class Shuffle {
     /** Buttons of each session's media notification, from the notification listener. */
     private static final Map<MediaSession.Token, Notification.Action[]> notificationActions = new ConcurrentHashMap<>();
 
+    /**
+     * Players that ignored the standard command, remembered across sessions and restarts so their
+     * button doesn't come back each time they start. Forgotten if the player later reports a change.
+     */
+    private static final String PREFS = "shuffle", IGNORED = "ignoredPackages";
+    private static volatile Set<String> ignoredPackages;
+
     private Shuffle() {}
+
+    /**
+     * Whether the widget shows the shuffle button: the user's setting, minus players that don't offer
+     * shuffle. Never changes the setting itself. Without a live session the capability isn't known,
+     * so only a player already known to lack shuffle hides it.
+     */
+    public static boolean visible(boolean userSetting, boolean hasSession, int state, boolean knownUnsupported) {
+        if (!userSetting) return false;
+        return hasSession ? state != UNSUPPORTED : !knownUnsupported;
+    }
+
+    /** True if this player was seen to ignore shuffle (and nothing else it exposes offers it). */
+    public static boolean knownUnsupported(Context context, @Nullable String packageName) {
+        return packageName != null && ignored(context).contains(packageName);
+    }
+
+    private static Set<String> ignored(Context context) {
+        Set<String> s = ignoredPackages;
+        if (s == null) {
+            s = Collections.newSetFromMap(new ConcurrentHashMap<>());
+            s.addAll(prefs(context).getStringSet(IGNORED, Collections.<String>emptySet()));
+            ignoredPackages = s;
+        }
+        return s;
+    }
+
+    private static SharedPreferences prefs(Context context) {
+        return context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    private static void setIgnored(Context context, String packageName, boolean ignored) {
+        Set<String> s = ignored(context);
+        if (ignored ? s.add(packageName) : s.remove(packageName)) {
+            prefs(context).edit().putStringSet(IGNORED, new TreeSet<>(s)).apply();
+        }
+    }
 
     // --- Strategy selection (pure) ---
 
@@ -172,11 +216,11 @@ public final class Shuffle {
     // --- Session side ---
 
     /** The session's shuffle state as the widget shows it (also re-evaluates ignored commands). */
-    public static int of(MediaController controller) {
-        return capability(controller).state;
+    public static int of(Context context, MediaController controller) {
+        return capability(context, controller).state;
     }
 
-    static Choice capability(MediaController controller) {
+    static Choice capability(Context context, MediaController controller) {
         MediaSession.Token token = controller.getSessionToken();
         Integer raw = compatModes.get(token);
         long[] wait = pending.get(token);
@@ -184,17 +228,29 @@ public final class Shuffle {
             pending.remove(token);
             if (raw == null || raw == wait[0]) { // nothing changed: it ignored us
                 unresponsive.add(token);
+                setIgnored(context, controller.getPackageName(), true);
                 Diagnostics.event(controller.getPackageName() + ": no shuffle change within "
                         + CONFIRM_MS + "ms, standard command treated as ignored");
             }
         }
         Snapshot s = new Snapshot(controller);
         Choice c = choose(raw != null, raw == null ? COMPAT_INVALID : raw, s.actions, s.ids, s.names,
-                s.titles, unresponsive.contains(token));
+                s.titles, ignoredStandard(context, controller));
         // Record what this session exposes whenever it changes (bounded history, no track info).
         String line = describe(controller, s, raw, c);
         if (!line.equals(logged.put(token, line))) Diagnostics.event(line);
         return c;
+    }
+
+    /**
+     * This session ignored us, or (unless it now advertises shuffle) the same player did before.
+     * Remembering only covers the unadvertised path, where a default "off" can fake support.
+     */
+    private static boolean ignoredStandard(Context context, MediaController controller) {
+        if (unresponsive.contains(controller.getSessionToken())) return true;
+        PlaybackState ps = controller.getPlaybackState();
+        boolean advertised = ps != null && (ps.getActions() & ACTION_SET_SHUFFLE_MODE) != 0;
+        return !advertised && knownUnsupported(context, controller.getPackageName());
     }
 
     /** What one session exposes that matters for shuffle. */
@@ -224,7 +280,7 @@ public final class Shuffle {
     /** Sends shuffle through the session's own strategy; does nothing when unsupported. */
     public static void toggle(Context context, MediaController controller) {
         MediaSession.Token token = controller.getSessionToken();
-        Choice c = capability(controller);
+        Choice c = capability(context, controller);
         String sent;
         switch (c.strategy) {
             case STANDARD: {
@@ -308,6 +364,7 @@ public final class Shuffle {
 
         Watch(Context context, MediaController controller, Handler handler, Runnable onChange) {
             token = controller.getSessionToken();
+            String pkg = controller.getPackageName();
             compat = compat(context, controller);
             callback = new MediaControllerCompat.Callback() {
                 @Override
@@ -321,6 +378,7 @@ public final class Shuffle {
                     compatModes.put(token, shuffleMode);
                     pending.remove(token);     // it answered
                     unresponsive.remove(token);
+                    setIgnored(context, pkg, false); // it does answer after all
                     onChange.run();
                 }
             };
@@ -353,12 +411,16 @@ public final class Shuffle {
     private static final Map<MediaSession.Token, String> logged = new ConcurrentHashMap<>();
 
     /** One line describing what a session exposes for shuffle and what Radiation chose. */
-    static String describe(MediaController controller) {
-        MediaSession.Token token = controller.getSessionToken();
-        Integer raw = compatModes.get(token);
+    static String describe(Context context, MediaController controller) {
+        Integer raw = compatModes.get(controller.getSessionToken());
         Snapshot s = new Snapshot(controller);
         return describe(controller, s, raw, choose(raw != null, raw == null ? COMPAT_INVALID : raw, s.actions,
-                s.ids, s.names, s.titles, unresponsive.contains(token)));
+                s.ids, s.names, s.titles, ignoredStandard(context, controller)));
+    }
+
+    /** Players remembered as ignoring shuffle, for the diagnostic report. */
+    static Set<String> ignoredPackages(Context context) {
+        return new TreeSet<>(ignored(context));
     }
 
     private static String describe(MediaController controller, Snapshot s, @Nullable Integer raw, Choice c) {
@@ -371,6 +433,7 @@ public final class Shuffle {
                 + " SET_SHUFFLE_MODE_ENABLED=" + ((s.actions & ACTION_SET_SHUFFLE_MODE_ENABLED) != 0)
                 + " compatReady=" + (raw != null) + " compatMode=" + (raw == null ? "n/a" : raw)
                 + " ignored=" + unresponsive.contains(controller.getSessionToken())
+                + (ignoredPackages != null && ignoredPackages.contains(controller.getPackageName()) ? " (remembered)" : "")
                 + " custom=[" + customs + "]"
                 + " notificationButtons=" + java.util.Arrays.toString(s.titles)
                 + " extrasKeys=" + (extras == null ? "[]" : new TreeSet<>(extras.keySet()))

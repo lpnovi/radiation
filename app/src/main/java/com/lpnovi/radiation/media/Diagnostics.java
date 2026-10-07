@@ -64,12 +64,14 @@ public final class Diagnostics {
             if (sessions.isEmpty()) r.append("  none (open a player and start playback)\n");
             for (MediaController c : sessions) {
                 PlaybackState ps = c.getPlaybackState();
-                r.append("  ").append(Shuffle.describe(c))
+                r.append("  ").append(Shuffle.describe(context, c))
                         .append(" playbackState=").append(ps == null ? "none" : ps.getState()).append('\n');
             }
         } catch (SecurityException e) {
             r.append("  unavailable: notification access is off\n");
         }
+
+        r.append("\nShuffle hidden for (ignored commands): ").append(Shuffle.ignoredPackages(context)).append('\n');
 
         r.append("\nRecent shuffle events (oldest first):\n");
         synchronized (events) {
