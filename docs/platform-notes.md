@@ -50,3 +50,11 @@ What Android's AppWidget / RemoteViews model allows, and what Radiation does abo
 |---|---|---|
 | System font | A view that sets no font family uses the device font, including Samsung font styles. Named families like `sans-serif-medium` are separate aliases that custom device fonts may not replace. Material 3 uses `sans-serif-medium` for titles, labels, buttons and chips. | No hard-coded family anywhere. The widget title is the default family at weight 500; in the Studio, Material's title/label styles are overridden to the default family at weight 500. Weights need Android 9+ (bold before). |
 | Weights of custom fonts | A device font that ships only regular and bold has no true 500 weight. | Android picks the nearest weight it has, so on such fonts the title may render regular (hierarchy then comes from size and color). |
+
+## Color tones and icon sets
+
+| Topic | Approach |
+|---|---|
+| Pastel album colors | Same album seed and hue as Rich, placed in fixed soft bands instead of being darkened: surface lightness 0.90 (saturation 0.20-0.40), glow 0.79 (0.30-0.55), accent 0.78 (0.30-0.58). The saturation floor prevents muddy grays, the ceiling prevents candy colors, and fixed lightness makes very dark, bright and saturated art land in the same range. Monochrome art stays neutral; no artwork gives a clean warm-neutral light surface. Contrast rules then pick dark text and deepen the controls (same hue) on these light surfaces. |
+| Gradient readability | If a gradient's two ends straddle the mid-tones (e.g. a pastel glow made translucent over a dark wallpaper), no text color reads on both; the glow is pulled toward the surface until black or white text does. |
+| Icon sets | Rounded (default, Material Symbols Rounded), Sharp (classic Material), Line (1.75 strokes, round caps/joins), Bold (filled + stroked shapes, thick round bars). Each set is one drawable family covering play, pause, previous, next and shuffle off/on (with a dot in that set's style), all with the same pressed-state shrink. Line and Bold are stroke-built vectors; tinting them with a color filter is safe (unlike a stroke-only `GradientDrawable`, a vector path without a fill paints no interior). |

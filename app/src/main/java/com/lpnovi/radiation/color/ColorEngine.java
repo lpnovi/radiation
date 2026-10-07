@@ -45,6 +45,7 @@ public final class ColorEngine {
     public static Theme theme(WidgetConfig c, Inputs in) {
         Theme t = new Theme();
         int seed = in.seed;
+        boolean pastel = c.albumTone == WidgetConfig.AlbumTone.PASTEL;
         switch (c.background) {
             case AMOLED: t.surface = 0xFF000000; break;
             case MATERIAL_YOU: t.surface = opaque(in.myBg); break;
@@ -52,15 +53,24 @@ public final class ColorEngine {
             // A light haze of the wallpaper's own color: reads as frosted glass once translucent.
             case GLASS: t.surface = blend(WHITE, opaque(in.wallpaper), 0.35f); break;
             case ALBUM_GRADIENT:
-                t.surface = seed == NONE ? 0xFF000000 : albumSurface(seed);
-                t.glow = seed == NONE ? NONE : albumGlow(seed);
+                t.surface = seed == NONE ? albumFallback(pastel) : pastel ? pastelSurface(seed) : albumSurface(seed);
+                t.glow = seed == NONE ? NONE : pastel ? pastelGlow(seed) : albumGlow(seed);
                 break;
-            default: t.surface = seed == NONE ? 0xFF000000 : albumSurface(seed); break;
+            default:
+                t.surface = seed == NONE ? albumFallback(pastel) : pastel ? pastelSurface(seed) : albumSurface(seed);
+                break;
         }
         float alpha = c.backgroundAlpha / 255f;
         t.effective = blend(t.surface, opaque(in.wallpaper), alpha);
         // Text sits over both gradient ends; judge readability against the worse of the two.
         int other = t.glow == NONE ? t.effective : blend(t.glow, opaque(in.wallpaper), alpha);
+        // If the two gradient ends straddle the mid-tones (e.g. a light pastel glow made translucent
+        // over a dark wallpaper), no text color can be readable on both. Readability wins: pull the
+        // glow toward the surface until black or white text works across the whole gradient.
+        for (float k = 0.1f; t.glow != NONE && bestTextContrast(t.effective, other) < TEXT_CONTRAST && k <= 1f; k += 0.1f) {
+            t.glow = blend(t.surface, t.glow, k);
+            other = blend(t.glow, opaque(in.wallpaper), alpha);
+        }
         t.darkForeground = minContrast(INK, t.effective, other) > minContrast(WHITE, t.effective, other);
         t.text = t.darkForeground ? INK : WHITE;
         int secondary = blend(t.text, t.effective, 0.72f);
@@ -73,12 +83,16 @@ public final class ColorEngine {
         int accentSeed;
         switch (c.accent) {
             case MATERIAL_YOU: accentSeed = opaque(in.myAccent); break;
-            case ALBUM: accentSeed = seed == NONE ? t.text : tame(seed); break;
+            case ALBUM: accentSeed = seed == NONE ? t.text : pastel ? pastelAccent(seed) : tame(seed); break;
             default: accentSeed = t.text; break;
         }
         t.accent = ensureContrast(accentSeed, t.effective, other, TEXT_CONTRAST, t.text);
         t.placeholder = blend(t.text, t.effective, 0.12f);
         return t;
+    }
+
+    private static double bestTextContrast(int bgA, int bgB) {
+        return Math.max(minContrast(INK, bgA, bgB), minContrast(WHITE, bgA, bgB));
     }
 
     private static double minContrast(int fg, int bgA, int bgB) {
@@ -127,6 +141,42 @@ public final class ColorEngine {
         float[] hsl = toHsl(seed);
         float s = hsl[1] < MONO_SATURATION ? 0f : Math.min(hsl[1], 0.45f);
         return fromHsl(hsl[0], s, 0.085f);
+    }
+
+    // --- Pastel tone ---
+    //
+    // Same seed and hue as Rich, but placed in fixed soft bands instead of being darkened: lowered
+    // saturation with a floor (so it never goes muddy gray) and a ceiling (so it never looks candy),
+    // and lightness set by role rather than taken from the artwork, so very dark, very bright and
+    // saturated art all land in the same tasteful range. Monochrome art stays truly neutral.
+    // Text and control colors are then chosen by the usual contrast rules, so a light pastel
+    // surface gets dark text and deepened controls of the same hue.
+
+    /** Light, softly tinted surface. */
+    static int pastelSurface(int seed) {
+        return pastel(seed, 0.6f, 0.20f, 0.40f, 0.90f, 0.93f);
+    }
+
+    /** Pastel glow: a little deeper and richer than the surface so the gradient stays visible. */
+    static int pastelGlow(int seed) {
+        return pastel(seed, 0.8f, 0.30f, 0.55f, 0.79f, 0.84f);
+    }
+
+    /** Soft accent (used as is on dark surfaces, deepened by contrast rules on light ones). */
+    static int pastelAccent(int seed) {
+        return pastel(seed, 0.7f, 0.30f, 0.58f, 0.78f, 0.80f);
+    }
+
+    /** Pastel without artwork: a clean warm-neutral light surface (deterministic). */
+    static int albumFallback(boolean pastel) {
+        return pastel ? 0xFFF1F0EE : 0xFF000000;
+    }
+
+    private static int pastel(int seed, float satScale, float satMin, float satMax, float light, float monoLight) {
+        float[] hsl = toHsl(seed);
+        if (hsl[1] < MONO_SATURATION) return fromHsl(hsl[0], 0f, monoLight);
+        float s = Math.max(satMin, Math.min(satMax, hsl[1] * satScale));
+        return fromHsl(hsl[0], s, light);
     }
 
     /** The gradient's glow: the artwork's color, deep enough that light text stays readable on it. */

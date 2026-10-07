@@ -25,7 +25,11 @@
     <string name="opacity_percent">%d%%</string>
 
     <!-- Background -->
-    <string name="section_background">Background</string>
+    <string name="section_background">Appearance</string>
+    <string name="album_tone">Album colors</string>
+    <string name="tone_rich">Rich</string>
+    <string name="tone_pastel">Pastel</string>
+    <string name="hint_album_tone">Pastel uses lighter, softer shades of the artwork for album backgrounds and album-colored controls. Text and controls stay readable either way.</string>
     <string name="bg_album_tint">Album tint</string>
     <string name="bg_album_gradient">Album glow</string>
     <string name="bg_amoled">AMOLED</string>
@@ -43,6 +47,12 @@
 
     <!-- Controls -->
     <string name="section_controls">Controls</string>
+    <string name="controls_color">Color</string>
+    <string name="icon_style">Icons</string>
+    <string name="icons_rounded">Rounded</string>
+    <string name="icons_sharp">Sharp</string>
+    <string name="icons_line">Line</string>
+    <string name="icons_bold">Bold</string>
     <string name="accent_album">Album</string>
     <string name="accent_material_you">Material You</string>
     <string name="accent_mono">Mono</string>

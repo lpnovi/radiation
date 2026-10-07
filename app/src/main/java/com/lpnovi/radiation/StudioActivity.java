@@ -28,6 +28,8 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
 import com.lpnovi.radiation.config.WidgetConfig;
 import com.lpnovi.radiation.config.WidgetConfig.Accent;
+import com.lpnovi.radiation.config.WidgetConfig.AlbumTone;
+import com.lpnovi.radiation.config.WidgetConfig.IconStyle;
 import com.lpnovi.radiation.config.WidgetConfig.ArtShape;
 import com.lpnovi.radiation.config.WidgetConfig.Background;
 import com.lpnovi.radiation.config.WidgetConfig.TapAction;
@@ -64,6 +66,8 @@ public class StudioActivity extends AppCompatActivity {
             R.string.hint_bg_amoled, R.string.hint_bg_material_you, R.string.hint_bg_glass, R.string.hint_bg_custom};
     private static final int[] ACCENTS = {R.id.accent_album, R.id.accent_material_you, R.id.accent_mono};
     private static final int[] VISUALIZERS = {R.id.viz_off, R.id.viz_bars, R.id.viz_wave};
+    private static final int[] TONES = {R.id.tone_rich, R.id.tone_pastel};
+    private static final int[] ICON_STYLES = {R.id.icons_rounded, R.id.icons_sharp, R.id.icons_line, R.id.icons_bold};
     private static final int[] ART_SHAPES = {R.id.art_rounded, R.id.art_circle};
     private static final int[] TAP_ACTIONS = {R.id.tap_active, R.id.tap_spotify, R.id.tap_nothing};
 
@@ -86,7 +90,7 @@ public class StudioActivity extends AppCompatActivity {
     private FrameLayout preview;
     private View previewContent;
     private ChipGroup picker, backgrounds;
-    private MaterialButtonToggleGroup accents, visualizers, artShapes, tapActions;
+    private MaterialButtonToggleGroup accents, tones, iconStyles, visualizers, artShapes, tapActions;
     private Slider opacity;
     private TextView opacityValue, backgroundHint;
     private LinearLayout swatches;
@@ -122,6 +126,8 @@ public class StudioActivity extends AppCompatActivity {
         backgrounds = findViewById(R.id.bg_group);
         accents = findViewById(R.id.accent_group);
         visualizers = findViewById(R.id.viz_group);
+        tones = findViewById(R.id.tone_group);
+        iconStyles = findViewById(R.id.icon_group);
         artShapes = findViewById(R.id.art_shape_group);
         tapActions = findViewById(R.id.tap_group);
         opacity = findViewById(R.id.opacity);
@@ -162,6 +168,8 @@ public class StudioActivity extends AppCompatActivity {
         });
         onChoice(accents, ACCENTS, i -> edit(() -> config.accent = Accent.values()[i]));
         onChoice(visualizers, VISUALIZERS, i -> edit(() -> config.visualizer = Visualizer.values()[i]));
+        onChoice(tones, TONES, i -> edit(() -> config.albumTone = AlbumTone.values()[i]));
+        onChoice(iconStyles, ICON_STYLES, i -> edit(() -> config.iconStyle = IconStyle.values()[i]));
         onChoice(artShapes, ART_SHAPES, i -> edit(() -> config.artShape = ArtShape.values()[i]));
         onChoice(tapActions, TAP_ACTIONS, i -> edit(() -> config.tapAction = TapAction.values()[i]));
         opacity.addOnChangeListener((s, value, fromUser) -> {
@@ -249,6 +257,8 @@ public class StudioActivity extends AppCompatActivity {
         backgrounds.check(BACKGROUNDS[config.background.ordinal()]);
         accents.check(ACCENTS[config.accent.ordinal()]);
         visualizers.check(VISUALIZERS[config.visualizer.ordinal()]);
+        tones.check(TONES[config.albumTone.ordinal()]);
+        iconStyles.check(ICON_STYLES[config.iconStyle.ordinal()]);
         artShapes.check(ART_SHAPES[config.artShape.ordinal()]);
         tapActions.check(TAP_ACTIONS[config.tapAction.ordinal()]);
         outline.setChecked(config.outline);

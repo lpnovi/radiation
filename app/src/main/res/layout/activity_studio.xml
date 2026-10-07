@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:ignore="TooManyViews">
+    <!-- One scrolling settings screen inflated once; ~90 views costs a few ms. -->
 
     <!-- Header and preview stay pinned so the widget is always visible while editing. -->
     <TextView
@@ -226,6 +229,32 @@
                                 android:orientation="horizontal" />
                         </HorizontalScrollView>
 
+                        <TextView
+                            style="@style/Studio.Label"
+                            android:text="@string/album_tone" />
+
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/tone_group"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:selectionRequired="true"
+                            app:singleSelection="true">
+
+                            <Button
+                                android:id="@+id/tone_rich"
+                                style="@style/Studio.Segment"
+                                android:text="@string/tone_rich" />
+
+                            <Button
+                                android:id="@+id/tone_pastel"
+                                style="@style/Studio.Segment"
+                                android:text="@string/tone_pastel" />
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                        <TextView
+                            style="@style/Studio.Hint"
+                            android:text="@string/hint_album_tone" />
+
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -280,6 +309,11 @@
                             style="@style/Studio.Section"
                             android:text="@string/section_controls" />
 
+                        <TextView
+                            style="@style/Studio.Label"
+                            android:layout_marginTop="0dp"
+                            android:text="@string/controls_color" />
+
                         <com.google.android.material.button.MaterialButtonToggleGroup
                             android:id="@+id/accent_group"
                             android:layout_width="match_parent"
@@ -301,6 +335,38 @@
                                 android:id="@+id/accent_mono"
                                 style="@style/Studio.Segment"
                                 android:text="@string/accent_mono" />
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                        <TextView
+                            style="@style/Studio.Label"
+                            android:text="@string/icon_style" />
+
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/icon_group"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:selectionRequired="true"
+                            app:singleSelection="true">
+
+                            <Button
+                                android:id="@+id/icons_rounded"
+                                style="@style/Studio.Segment"
+                                android:text="@string/icons_rounded" />
+
+                            <Button
+                                android:id="@+id/icons_sharp"
+                                style="@style/Studio.Segment"
+                                android:text="@string/icons_sharp" />
+
+                            <Button
+                                android:id="@+id/icons_line"
+                                style="@style/Studio.Segment"
+                                android:text="@string/icons_line" />
+
+                            <Button
+                                android:id="@+id/icons_bold"
+                                style="@style/Studio.Segment"
+                                android:text="@string/icons_bold" />
                         </com.google.android.material.button.MaterialButtonToggleGroup>
 
                         <com.google.android.material.materialswitch.MaterialSwitch

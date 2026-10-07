@@ -141,7 +141,10 @@ public final class WidgetRenderer {
         v.setInt(R.id.play_pause, "setColorFilter", t.accent);
         v.setViewVisibility(R.id.previous, config.showPrevious ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.next, config.showNext ? View.VISIBLE : View.GONE);
-        setShuffle(context, v, config.showShuffle, np.shuffle, t);
+        int[] icons = ICONS[config.iconStyle.ordinal()];
+        v.setImageViewResource(R.id.previous, icons[PREVIOUS]);
+        v.setImageViewResource(R.id.next, icons[NEXT]);
+        setShuffle(context, v, config.showShuffle, np.shuffle, t, icons);
 
         // Visualizer: the song's accent, softened so it stays an accent rather than a feature.
         int vizColor = (t.accent & 0x00FFFFFF) | VIZ_ALPHA << 24;
@@ -154,7 +157,7 @@ public final class WidgetRenderer {
         v.setInt(R.id.viz_static, "setImageAlpha", VIZ_ALPHA);
         v.setImageViewResource(R.id.viz_static, config.visualizer == WidgetConfig.Visualizer.WAVE
                 ? R.drawable.viz_wave_0 : R.drawable.viz_bars_0);
-        setPlaying(context, v, np.playing && !nothing, config.visualizer);
+        setPlaying(context, v, np.playing && !nothing, config.visualizer, icons);
 
         v.setOnClickPendingIntent(R.id.shuffle, control(context, MediaSessions.Action.SHUFFLE));
         v.setOnClickPendingIntent(R.id.previous, control(context, MediaSessions.Action.PREVIOUS));
@@ -169,6 +172,19 @@ public final class WidgetRenderer {
     }
 
     private static final int VIZ_ALPHA = 0xB8;
+
+    /** Glyph slots, and one complete matching set per {@link WidgetConfig.IconStyle} (in enum order). */
+    private static final int PLAY = 0, PAUSE = 1, PREVIOUS = 2, NEXT = 3, SHUFFLE_OFF = 4, SHUFFLE_ON = 5;
+    private static final int[][] ICONS = {
+            {R.drawable.ic_play_state, R.drawable.ic_pause_state, R.drawable.ic_skip_previous_state,
+                    R.drawable.ic_skip_next_state, R.drawable.ic_shuffle_off_state, R.drawable.ic_shuffle_on_state},
+            {R.drawable.ic_sharp_play_state, R.drawable.ic_sharp_pause_state, R.drawable.ic_sharp_previous_state,
+                    R.drawable.ic_sharp_next_state, R.drawable.ic_sharp_shuffle_off_state, R.drawable.ic_sharp_shuffle_on_state},
+            {R.drawable.ic_line_play_state, R.drawable.ic_line_pause_state, R.drawable.ic_line_previous_state,
+                    R.drawable.ic_line_next_state, R.drawable.ic_line_shuffle_off_state, R.drawable.ic_line_shuffle_on_state},
+            {R.drawable.ic_bold_play_state, R.drawable.ic_bold_pause_state, R.drawable.ic_bold_previous_state,
+                    R.drawable.ic_bold_next_state, R.drawable.ic_bold_shuffle_off_state, R.drawable.ic_bold_shuffle_on_state},
+    };
     /** Widget corner radius before Android 12 (values/dimens.xml widget_radius). */
     private static final float LEGACY_RADIUS_DP = 28;
     /** Border strength over an opaque surface, and over a fully transparent one (its only outline). */
@@ -182,8 +198,8 @@ public final class WidgetRenderer {
      * nothing animates while paused. It's a still frame when system animations are off, and below
      * Android 12, where RemoteViews can't tint a ProgressBar.
      */
-    static void setPlaying(Context context, RemoteViews v, boolean playing, WidgetConfig.Visualizer viz) {
-        v.setImageViewResource(R.id.play_pause, playing ? R.drawable.ic_pause_state : R.drawable.ic_play_state);
+    static void setPlaying(Context context, RemoteViews v, boolean playing, WidgetConfig.Visualizer viz, int[] icons) {
+        v.setImageViewResource(R.id.play_pause, icons[playing ? PAUSE : PLAY]);
         boolean show = playing && viz != WidgetConfig.Visualizer.OFF;
         boolean animate = show && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && animationsEnabled(context);
         v.setViewVisibility(R.id.viz_bars, animate && viz == WidgetConfig.Visualizer.BARS ? View.VISIBLE : View.GONE);
@@ -195,10 +211,10 @@ public final class WidgetRenderer {
      * On: accent plus a dot under the glyph (state isn't conveyed by color alone). Off: secondary
      * text color. Unsupported by the player: faded, and taps are ignored.
      */
-    private static void setShuffle(Context context, RemoteViews v, boolean show, int mode, ColorEngine.Theme t) {
+    private static void setShuffle(Context context, RemoteViews v, boolean show, int mode, ColorEngine.Theme t,
+                                   int[] icons) {
         v.setViewVisibility(R.id.shuffle, show ? View.VISIBLE : View.GONE);
-        v.setImageViewResource(R.id.shuffle, mode == Shuffle.ON
-                ? R.drawable.ic_shuffle_on_state : R.drawable.ic_shuffle_off_state);
+        v.setImageViewResource(R.id.shuffle, icons[mode == Shuffle.ON ? SHUFFLE_ON : SHUFFLE_OFF]);
         v.setInt(R.id.shuffle, "setColorFilter", mode == Shuffle.ON ? t.accent : t.textSecondary);
         v.setInt(R.id.shuffle, "setImageAlpha", mode == Shuffle.UNSUPPORTED ? 0x5C : 0xFF);
         v.setContentDescription(R.id.shuffle, context.getText(mode == Shuffle.ON ? R.string.shuffle_on

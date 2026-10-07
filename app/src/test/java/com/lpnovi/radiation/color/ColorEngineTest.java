@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.lpnovi.radiation.config.WidgetConfig;
 import com.lpnovi.radiation.config.WidgetConfig.Accent;
+import com.lpnovi.radiation.config.WidgetConfig.AlbumTone;
 import com.lpnovi.radiation.config.WidgetConfig.Background;
 
 import org.junit.Test;
@@ -19,11 +20,17 @@ public class ColorEngineTest {
     private static final int LIGHT_WALL = 0xFFF2F0EB;
 
     private static ColorEngine.Theme theme(Background bg, Accent accent, int alpha, int seed, int wall, int custom) {
+        return theme(bg, accent, alpha, seed, wall, custom, AlbumTone.RICH);
+    }
+
+    private static ColorEngine.Theme theme(Background bg, Accent accent, int alpha, int seed, int wall, int custom,
+                                           AlbumTone tone) {
         WidgetConfig c = new WidgetConfig();
         c.background = bg;
         c.accent = accent;
         c.backgroundAlpha = alpha;
         c.customColor = custom;
+        c.albumTone = tone;
         ColorEngine.Inputs in = new ColorEngine.Inputs();
         in.seed = seed;
         in.wallpaper = wall;
@@ -58,7 +65,9 @@ public class ColorEngineTest {
                     for (int alpha : new int[]{0, 102, 128, 255}) {
                         for (int wall : new int[]{DARK_WALL, LIGHT_WALL, ColorEngine.UNKNOWN_WALLPAPER}) {
                             for (int custom : bg == Background.CUSTOM ? customs : new int[]{0}) {
-                                assertReadable(theme(bg, accent, alpha, seed, wall, custom), alpha, wall);
+                                for (AlbumTone tone : AlbumTone.values()) {
+                                    assertReadable(theme(bg, accent, alpha, seed, wall, custom, tone), alpha, wall);
+                                }
                             }
                         }
                     }
@@ -166,6 +175,60 @@ public class ColorEngineTest {
     public void pickSeedMonochromeReturnsDominantGray() {
         assertEquals(0xFF555555, ColorEngine.pickSeed(new int[]{0xFF555555, 0xFFDDDDDD}, new int[]{700, 300}));
         assertEquals(ColorEngine.NONE, ColorEngine.pickSeed(new int[0], new int[0]));
+    }
+
+    // --- Pastel ---
+
+    private static ColorEngine.Theme pastel(Background bg, int seed) {
+        return theme(bg, Accent.ALBUM, 255, seed, DARK_WALL, 0, AlbumTone.PASTEL);
+    }
+
+    /** Dark, bright, saturated and dull-but-colored art all land in the same soft band, same hue. */
+    @Test
+    public void pastelIsSoftAndConsistentAcrossArtwork() {
+        int[] seeds = {0xFF0A0F2A /* very dark */, 0xFFFFF4D6 /* very bright */, 0xFFFF0040 /* saturated */,
+                0xFF1DB954, 0xFF6A4C93, 0xFF8C7A5B /* dull tan */};
+        for (int seed : seeds) {
+            ColorEngine.Theme t = pastel(Background.ALBUM_TINT, seed);
+            float[] s = ColorEngine.toHsl(t.surface);
+            assertEquals("surface lightness", 0.90f, s[2], 0.02f);
+            assertTrue("soft, not candy", s[1] <= 0.45f); // 0.40 cap + 8-bit rounding at high lightness
+            assertTrue("not muddy gray", s[1] >= 0.19f);
+            assertEquals("keeps the artwork hue", ColorEngine.toHsl(seed)[0], s[0], 3f);
+            assertTrue("light surface gets dark text", t.darkForeground);
+        }
+    }
+
+    @Test
+    public void pastelMonochromeArtStaysNeutral() {
+        ColorEngine.Theme t = pastel(Background.ALBUM_TINT, 0xFF7A7A78);
+        assertEquals(0f, ColorEngine.toHsl(t.surface)[1], 0.02f);
+        assertEquals(0f, ColorEngine.toHsl(t.accent)[1], 0.02f);
+    }
+
+    @Test
+    public void pastelGlowIsVisibleAndReadable() {
+        ColorEngine.Theme t = pastel(Background.ALBUM_GRADIENT, 0xFFE63946);
+        assertTrue(ColorEngine.luminance(t.glow) < ColorEngine.luminance(t.surface)); // glow distinct
+        assertTrue(contrast(t.text, t.glow) >= 4.5 && contrast(t.text, t.surface) >= 4.5);
+    }
+
+    /** On a dark surface, pastel controls stay light and soft; on a pastel surface they deepen. */
+    @Test
+    public void pastelControlsAdaptToTheSurface() {
+        ColorEngine.Theme onBlack = theme(Background.AMOLED, Accent.ALBUM, 255, 0xFF1DB954, DARK_WALL, 0, AlbumTone.PASTEL);
+        float[] a = ColorEngine.toHsl(onBlack.accent);
+        assertTrue(a[2] >= 0.75f && a[1] <= 0.6f);
+        ColorEngine.Theme onPastel = pastel(Background.ALBUM_TINT, 0xFF1DB954);
+        assertTrue(ColorEngine.toHsl(onPastel.accent)[2] < 0.5f);
+        assertEquals(141f, ColorEngine.toHsl(onPastel.accent)[0], 8f); // same hue, deepened
+    }
+
+    @Test
+    public void richToneIsUnchanged() {
+        // The default must be exactly the existing behavior.
+        assertEquals(theme(Background.ALBUM_TINT, Accent.ALBUM, 255, 0xFFE63946, DARK_WALL, 0).surface,
+                ColorEngine.albumSurface(0xFFE63946));
     }
 
     @Test

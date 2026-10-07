@@ -25,6 +25,12 @@ public final class WidgetConfig {
         CUSTOM,
     }
 
+    /** How album-derived colors are treated: deep and rich (default), or light and soft. */
+    public enum AlbumTone { RICH, PASTEL }
+
+    /** Transport icon family. ROUNDED is the original set. */
+    public enum IconStyle { ROUNDED, SHARP, LINE, BOLD }
+
     /** Color of the controls and visualizer. */
     public enum Accent { ALBUM, MATERIAL_YOU, MONO }
 
@@ -41,6 +47,8 @@ public final class WidgetConfig {
     public int backgroundAlpha = 255;
     public boolean outline = false;
     public Accent accent = Accent.ALBUM;
+    public AlbumTone albumTone = AlbumTone.RICH;
+    public IconStyle iconStyle = IconStyle.ROUNDED;
     public Visualizer visualizer = Visualizer.BARS;
     public boolean showArt = true;
     public ArtShape artShape = ArtShape.ROUNDED;
@@ -79,6 +87,8 @@ public final class WidgetConfig {
         c.backgroundAlpha = p.getInt(k + "backgroundAlpha", c.backgroundAlpha);
         c.outline = p.getBoolean(k + "outline", c.outline);
         c.accent = parse(Accent.class, p.getString(k + "accent", null), c.accent);
+        c.albumTone = parse(AlbumTone.class, p.getString(k + "albumTone", null), c.albumTone);
+        c.iconStyle = parse(IconStyle.class, p.getString(k + "iconStyle", null), c.iconStyle);
         c.visualizer = parse(Visualizer.class, p.getString(k + "visualizer", null), c.visualizer);
         c.showArt = p.getBoolean(k + "showArt", c.showArt);
         c.artShape = parse(ArtShape.class, p.getString(k + "artShape", null), c.artShape);
@@ -99,6 +109,8 @@ public final class WidgetConfig {
                 .putInt(k + "backgroundAlpha", backgroundAlpha)
                 .putBoolean(k + "outline", outline)
                 .putString(k + "accent", accent.name())
+                .putString(k + "albumTone", albumTone.name())
+                .putString(k + "iconStyle", iconStyle.name())
                 .putString(k + "visualizer", visualizer.name())
                 .putBoolean(k + "showArt", showArt)
                 .putString(k + "artShape", artShape.name())
