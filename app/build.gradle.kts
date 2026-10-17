@@ -14,8 +14,20 @@ android {
         versionName = "0.1.0"
     }
 
+    // Credentials live in ~/.gradle/gradle.properties, never in the repo.
+    val storeFilePath = providers.gradleProperty("RADIATION_STORE_FILE").orNull
+    if (storeFilePath != null) {
+        signingConfigs.create("release") {
+            storeFile = file(storeFilePath)
+            storePassword = providers.gradleProperty("RADIATION_STORE_PASSWORD").get()
+            keyAlias = providers.gradleProperty("RADIATION_KEY_ALIAS").get()
+            keyPassword = providers.gradleProperty("RADIATION_KEY_PASSWORD").get()
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
